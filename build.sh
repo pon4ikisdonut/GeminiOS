@@ -177,8 +177,20 @@ DeviceTimeout=8
 EOF
 
     # 7. GRUB2 Dark Theme
-    mkdir -p "${ROOTFS}/boot/grub/themes/geminios"
+    mkdir -p "${ROOTFS}/boot/grub/themes/geminios" "${ROOTFS}/etc/grub.d"
     cp -r "${ROOT_DIR}/src/themes/grub/"* "${ROOTFS}/boot/grub/themes/geminios/"
+    cat > "${ROOTFS}/etc/grub.d/00_0_geminios_preloads" <<'EOF'
+#!/bin/sh
+cat <<'INSMODS'
+insmod part_gpt
+insmod part_msdos
+insmod all_video
+insmod gfxterm
+insmod png
+insmod jpeg
+INSMODS
+EOF
+    chmod +x "${ROOTFS}/etc/grub.d/00_0_geminios_preloads"
 
     # 8. Custom SDDM Material Design 3 Dark Login Screen (pure QtQuick)
     mkdir -p "${ROOTFS}/usr/share/sddm/themes/geminios"

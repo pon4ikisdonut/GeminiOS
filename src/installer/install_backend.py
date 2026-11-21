@@ -228,15 +228,19 @@ GRUB_THEME="/boot/grub/themes/geminios/theme.txt"
 GRUB_PRELOAD_MODULES="part_gpt part_msdos all_video png gfxterm"
 GRUBDEF
 
-cat > /etc/grub.d/01_geminios_header <<'GRUBHEADER'
+rm -f /etc/grub.d/01_geminios_header
+cat > /etc/grub.d/00_0_geminios_preloads <<'GRUBHEADER'
 #!/bin/sh
-exec tail -n +3 $0
+cat <<'EOF'
+insmod part_gpt
+insmod part_msdos
 insmod all_video
 insmod gfxterm
 insmod png
 insmod jpeg
+EOF
 GRUBHEADER
-chmod +x /etc/grub.d/01_geminios_header
+chmod +x /etc/grub.d/00_0_geminios_preloads
 
 {grub_install_cmd}
 grub-mkconfig -o /boot/grub/grub.cfg
