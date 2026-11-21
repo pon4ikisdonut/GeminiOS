@@ -310,15 +310,24 @@ QPushButton#TrashBtn:hover {
 class GeminiWorker(QThread):
     finished = pyqtSignal(dict)
 
-    def __init__(self, prompt: str, mode: str):
+    def __init__(self, prompt: str, mode: str, history: Optional[List[Dict]] = None):
         super().__init__()
         self.prompt = prompt
         self.mode = mode
+        self.history = history or []
 
     def run(self):
         is_agent = (self.mode == "agent")
         endpoint = "/v1/agent/plan" if is_agent else "/v1/chat"
-        payload = {"goal": self.prompt} if is_agent else {"prompt": self.prompt, "prefer": "auto"}
+        payload = (
+            {"goal": self.prompt}
+            if is_agent
+            else {
+                "prompt": self.prompt,
+                "messages": self.history,
+                "prefer": "auto",
+            }
+        )
 
         req = urllib.request.Request(
             f"{GEMINID_URL}{endpoint}",
@@ -941,7 +950,15 @@ class GeminiSpotlightWindow(QWidget):
         self.stop_btn.setVisible(True)
         self.backend_badge.setText("✦ Gemini думает...")
 
-        self.worker = GeminiWorker(text, self.active_mode)
+        # Collect conversation history of current session (up to last 40 turns) for multi-turn context
+        history_msgs = []
+        for m in current_sess.get("messages", [])[-40:]:
+            role = "assistant" if m.get("role") in ("assistant", "model") else "user"
+            content = m.get("content", "").strip()
+            if content:
+                history_msgs.append({"role": role, "content": content})
+
+        self.worker = GeminiWorker(text, self.active_mode, history=history_msgs)
         self.worker.finished.connect(self._on_ai_response)
         self.worker.start()
 

@@ -108,9 +108,15 @@ def make_handler(state: DaemonState):
             body = self._read_json()
             if self.path == "/v1/chat":
                 prompt = body.get("prompt", "")
+                messages = body.get("messages", [])
                 prefer = body.get("prefer", "auto")
                 use_pro = bool(body.get("pro", False))
-                result = state.backend.generate(prompt=prompt, prefer=prefer, use_pro=use_pro)
+                result = state.backend.generate(
+                    prompt=prompt,
+                    messages=messages,
+                    prefer=prefer,
+                    use_pro=use_pro,
+                )
                 self._send_json(200 if result["ok"] else 502, result)
             elif self.path == "/v1/agent/plan":
                 goal = body.get("goal", "")

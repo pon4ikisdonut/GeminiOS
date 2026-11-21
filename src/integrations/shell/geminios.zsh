@@ -2,9 +2,16 @@
 # 1. Intercepts missing commands and asks Gemini for package/fix hints
 # 2. Provides `wtf` to explain the last failed command
 # 3. Provides `ask` and `agent` shortcuts
+# 4. Prevents Zsh globbing errors on question marks (e.g. "gemini как дела?")
 
-alias ask='gemini'
-alias agent='gemini --agent'
+# Disable globbing for natural language CLI tools so `?` does not trigger "no matches found"
+alias gemini='noglob gemini'
+alias ask='noglob gemini'
+alias agent='noglob gemini --agent'
+alias wtf='noglob wtf'
+
+# Leave unmatched glob patterns as literal strings rather than throwing "no matches found"
+unsetopt NOMATCH 2>/dev/null
 
 command_not_found_handler() {
     local cmd="$1"

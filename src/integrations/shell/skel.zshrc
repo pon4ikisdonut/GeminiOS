@@ -76,8 +76,15 @@ bindkey '^[f' forward-word
 # 3. Tab Completion System
 autoload -Uz compinit && compinit -d ~/.zcompdump
 
-# 4. Material 3 Google Blue GeminiOS Prompt
+# 4. Do not abort on question marks or unmatched globs (e.g. "gemini как дела?")
+unsetopt NOMATCH 2>/dev/null
+alias gemini='noglob gemini'
+alias ask='noglob gemini'
+alias agent='noglob gemini --agent'
+alias wtf='noglob wtf'
+
+# 5. Material 3 Google Blue GeminiOS Prompt
 PROMPT='%F{#A8C7FA}✦%f %B%F{#E2E2E9}geminios%f%b %F{#8E9099}%~%f %F{#A8C7FA}❯%f '
 
-# 5. Load GeminiOS AI shell hooks (command_not_found, wtf, ask, agent)
+# 6. Load GeminiOS AI shell hooks (command_not_found, wtf, ask, agent)
 [[ -f /etc/profile.d/geminios.zsh ]] && source /etc/profile.d/geminios.zsh
