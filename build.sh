@@ -91,6 +91,21 @@ install_geminios_stack() {
     mkdir -p "${ROOTFS}/var/lib/gem/installed" "${ROOTFS}/var/cache/gem"
     ln -sf /usr/lib/gem/gem.py "${ROOTFS}/usr/bin/gem"
 
+    # Pre-register native GeminiOS system components in gem installed db
+    for comp in gemini-cli gemini-oobe gemini-overlay geminid geminios-core geminios-plasma-m3 geminios-plymouth geminios-sddm ollama-gemma; do
+        cat > "${ROOTFS}/var/lib/gem/installed/${comp}.json" <<EOF
+{
+  "name": "\${comp}",
+  "version": "1.0.1",
+  "description": "GeminiOS core system component",
+  "depends": [],
+  "files": [],
+  "repo": "geminios-main",
+  "is_system": true
+}
+EOF
+    done
+
     # 3. `geminid` System AI Daemon + Panic Guard + System Health Watcher
     install -Dm755 "${ROOT_DIR}/src/geminid/geminid.py" "${ROOTFS}/usr/lib/geminid/geminid.py"
     install -Dm644 "${ROOT_DIR}/src/geminid/backends.py" "${ROOTFS}/usr/lib/geminid/backends.py"
