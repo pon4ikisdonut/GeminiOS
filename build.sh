@@ -313,9 +313,17 @@ build_iso_native() {
     sed -i 's/^#ParallelDownloads = .*/ParallelDownloads = 10/' /etc/pacman.conf
     sed -i 's/^ParallelDownloads = .*/ParallelDownloads = 10/' /etc/pacman.conf
 
-    log "Bootstrapping independent glibc + Linux + base-devel + KDE Plasma 6 rootfs (using host package cache)..."
+    log "Bootstrapping independent glibc + Linux 7.3.5 (pinned) + base-devel + KDE Plasma 6 rootfs..."
+    # Pin kernel specifically to 7.3.5
+    KERNEL_SPEC="linux=7.3.5.arch1-1"
+    KERNEL_HDR_SPEC="linux-headers=7.3.5.arch1-1"
+    if ! pacman -Sp "${KERNEL_SPEC}" &>/dev/null; then
+        KERNEL_SPEC="linux>=7.3.5"
+        KERNEL_HDR_SPEC="linux-headers>=7.3.5"
+    fi
+
     pacstrap -c -P "${ROOTFS}" \
-        base base-devel pacman archlinux-keyring linux linux-firmware glibc systemd systemd-sysvcompat \
+        base base-devel pacman archlinux-keyring "${KERNEL_SPEC}" "${KERNEL_HDR_SPEC}" linux-firmware glibc systemd systemd-sysvcompat \
         iptables mkinitcpio pipewire-jack qt6-multimedia-ffmpeg \
         networkmanager iwd bluez pipewire pipewire-pulse wireplumber \
         sudo zsh bash git curl wget python python-pyqt6 wl-clipboard libnotify \
@@ -327,6 +335,11 @@ build_iso_native() {
 
     # Ensure pacman config, mirrorlist and keys are definitely present in rootfs
     cp -f /etc/pacman.conf "${ROOTFS}/etc/pacman.conf"
+    # Pin kernel package in rootfs pacman.conf so updates do not replace 7.3.5
+    sed -i 's/^#IgnorePkg =.*/IgnorePkg = linux linux-headers/' "${ROOTFS}/etc/pacman.conf"
+    if ! grep -q "^IgnorePkg = linux linux-headers" "${ROOTFS}/etc/pacman.conf"; then
+        sed -i '/\[options\]/a IgnorePkg = linux linux-headers' "${ROOTFS}/etc/pacman.conf"
+    fi
     mkdir -p "${ROOTFS}/etc/pacman.d"
     cp -f /etc/pacman.d/mirrorlist "${ROOTFS}/etc/pacman.d/mirrorlist"
     [[ -d /etc/pacman.d/gnupg ]] && cp -a /etc/pacman.d/gnupg "${ROOTFS}/etc/pacman.d/"

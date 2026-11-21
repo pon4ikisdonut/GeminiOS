@@ -207,6 +207,14 @@ echo "LANG=en_US.UTF-8" > /etc/locale.conf
 # Remove Live ISO autologin so installed system prompts for user password
 rm -f /etc/sddm.conf.d/20-autologin.conf
 
+# Pin Linux kernel 7.3.5 in pacman configuration
+if [ -f /etc/pacman.conf ]; then
+    sed -i 's/^#IgnorePkg =.*/IgnorePkg = linux linux-headers/' /etc/pacman.conf
+    if ! grep -q "^IgnorePkg = linux linux-headers" /etc/pacman.conf; then
+        sed -i '/\\[options\\]/a IgnorePkg = linux linux-headers' /etc/pacman.conf
+    fi
+fi
+
 # Standard disk initramfs with Plymouth OLED boot splash (removes geminios-live hook)
 cat > /etc/mkinitcpio.conf <<'MKCONF'
 MODULES=()
