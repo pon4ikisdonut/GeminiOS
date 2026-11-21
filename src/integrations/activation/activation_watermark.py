@@ -26,19 +26,26 @@ def is_activated() -> bool:
 class ActivationWatermark(QWidget):
     def __init__(self):
         super().__init__()
-        # Translucent, stay on top, click-through overlay
+        # Translucent, stay on top, click-through overlay that bypasses WM placement rules
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint
             | Qt.WindowType.WindowStaysOnTopHint
             | Qt.WindowType.Tool
+            | Qt.WindowType.BypassWindowManagerHint
             | Qt.WindowType.WindowDoesNotAcceptFocus
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
 
-        self.setFixedSize(360, 90)
+        self.setFixedSize(360, 80)
         self._position_on_screen()
+
+        # Keep pinned to bottom-right if screen geometry or workarea changes
+        primary = QApplication.primaryScreen()
+        if primary:
+            primary.availableGeometryChanged.connect(lambda _: self._position_on_screen())
+            primary.geometryChanged.connect(lambda _: self._position_on_screen())
 
         # Watch for activation status changes
         self.check_timer = QTimer(self)
@@ -47,10 +54,20 @@ class ActivationWatermark(QWidget):
         self.check_timer.start()
 
     def _position_on_screen(self):
-        screen = QApplication.primaryScreen().availableGeometry()
-        margin_right = 380
-        margin_bottom = 120
-        self.move(screen.right() - margin_right, screen.bottom() - margin_bottom)
+        screen = QApplication.primaryScreen()
+        if not screen:
+            return
+        geo = screen.availableGeometry()
+        # Pin strictly to the bottom-right corner (24px right margin, 32px bottom margin above panel)
+        x = geo.x() + geo.width() - self.width() - 24
+        y = geo.y() + geo.height() - self.height() - 32
+        self.setGeometry(x, y, self.width(), self.height())
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self._position_on_screen()
+        QTimer.singleShot(100, self._position_on_screen)
+        QTimer.singleShot(500, self._position_on_screen)
 
     def _check_status(self):
         if is_activated():
@@ -60,19 +77,20 @@ class ActivationWatermark(QWidget):
     def paintEvent(self, _event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
 
         # Draw Title
         title_font = QFont("Roboto", 13, QFont.Weight.Medium)
         painter.setFont(title_font)
-        painter.setPen(QColor(230, 230, 235, 120))
-        painter.drawText(0, 30, "Активация GeminiOS")
+        painter.setPen(QColor(230, 230, 235, 125))
+        painter.drawText(10, 26, "Активация GeminiOS")
 
         # Draw Subtitle
         sub_font = QFont("Roboto", 10, QFont.Weight.Normal)
         painter.setFont(sub_font)
-        painter.setPen(QColor(200, 200, 210, 100))
-        painter.drawText(0, 56, "Чтобы активировать GeminiOS, перейдите в «Параметры»")
-        painter.drawText(0, 74, "или введите `gem activate` в терминале.")
+        painter.setPen(QColor(200, 200, 210, 105))
+        painter.drawText(10, 48, "Чтобы активировать GeminiOS, перейдите в «Параметры»")
+        painter.drawText(10, 66, "или введите `gem activate` в терминале.")
 
 
 def main() -> int:

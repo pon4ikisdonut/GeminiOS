@@ -174,7 +174,7 @@ Type=Application
 Name=GeminiOS Spotlight Overlay
 Comment=Global Gemini AI & Agent Mode launcher (Super+G)
 Exec=/usr/bin/gemini-overlay
-Icon=geminios-launcher
+Icon=gemini-spotlight
 Categories=System;Utility;
 EOF
 
@@ -184,7 +184,7 @@ Type=Application
 Name=GeminiOS Clipboard AI
 Comment=Explain or fix clipboard content with Gemini (Super+Shift+G)
 Exec=/usr/bin/gemini-clip
-Icon=edit-paste
+Icon=gemini-clip
 Categories=System;Utility;
 EOF
 
@@ -283,11 +283,19 @@ EOF
     install -Dm644 "${ROOT_DIR}/src/themes/plasma-m3/konsole/GeminiM3Dark.colorscheme" \
         "${ROOTFS}/usr/share/konsole/GeminiM3Dark.colorscheme"
 
-    # Install Google G + Gemini Star launcher icons
-    mkdir -p "${ROOTFS}/usr/share/icons/hicolor/scalable/apps" "${ROOTFS}/usr/share/icons/hicolor/64x64/apps"
+    # Install distinct Material Design 3 icons for system apps
+    mkdir -p "${ROOTFS}/usr/share/icons/hicolor/scalable/apps" "${ROOTFS}/usr/share/icons/hicolor/64x64/apps" "${ROOTFS}/usr/share/icons"
     install -Dm644 "${ROOT_DIR}/src/themes/logo/geminios-logo.svg" "${ROOTFS}/usr/share/icons/hicolor/scalable/apps/geminios-launcher.svg"
     install -Dm644 "${ROOT_DIR}/src/themes/plasma-m3/icons/geminios-launcher.png" "${ROOTFS}/usr/share/icons/hicolor/64x64/apps/geminios-launcher.png"
     install -Dm644 "${ROOT_DIR}/src/themes/plasma-m3/icons/geminios-launcher.png" "${ROOTFS}/usr/share/icons/geminios-launcher.png"
+    install -Dm644 "${ROOT_DIR}/src/themes/plasma-m3/icons/geminios-installer.svg" "${ROOTFS}/usr/share/icons/hicolor/scalable/apps/geminios-installer.svg"
+    install -Dm644 "${ROOT_DIR}/src/themes/plasma-m3/icons/geminios-installer.svg" "${ROOTFS}/usr/share/icons/geminios-installer.svg"
+    install -Dm644 "${ROOT_DIR}/src/themes/plasma-m3/icons/gemini-spotlight.svg" "${ROOTFS}/usr/share/icons/hicolor/scalable/apps/gemini-spotlight.svg"
+    install -Dm644 "${ROOT_DIR}/src/themes/plasma-m3/icons/gemini-spotlight.svg" "${ROOTFS}/usr/share/icons/gemini-spotlight.svg"
+    install -Dm644 "${ROOT_DIR}/src/themes/plasma-m3/icons/gemini-clip.svg" "${ROOTFS}/usr/share/icons/hicolor/scalable/apps/gemini-clip.svg"
+    install -Dm644 "${ROOT_DIR}/src/themes/plasma-m3/icons/gemini-clip.svg" "${ROOTFS}/usr/share/icons/gemini-clip.svg"
+    install -Dm644 "${ROOT_DIR}/src/themes/plasma-m3/icons/gemini-oobe.svg" "${ROOTFS}/usr/share/icons/hicolor/scalable/apps/gemini-oobe.svg"
+    install -Dm644 "${ROOT_DIR}/src/themes/plasma-m3/icons/gemini-oobe.svg" "${ROOTFS}/usr/share/icons/gemini-oobe.svg"
 
     # Install fast systemd shutdown timeouts
     mkdir -p "${ROOTFS}/etc/systemd/system.conf.d" "${ROOTFS}/etc/systemd/user.conf.d"
@@ -336,6 +344,31 @@ hinting=slight
 [KDE]
 LookAndFeelPackage=org.geminios.material3.desktop
 widgetStyle=Breeze
+EOF
+
+    # Dual US + Russian keyboard layout for Live session & KDE Plasma 6 (Wayland & X11) with Alt+Shift toggle
+    cat > "${ROOTFS}/etc/skel/.config/kxkbrc" <<'EOF'
+[Layout]
+DisplayNames=,
+LayoutList=us,ru
+LayoutLoopCount=-1
+Model=pc105
+Options=grp:alt_shift_toggle,grp_led:scroll
+ResetOldOptions=true
+SwitchMode=Global
+Use=true
+VariantList=,
+EOF
+
+    mkdir -p "${ROOTFS}/etc/X11/xorg.conf.d"
+    cat > "${ROOTFS}/etc/X11/xorg.conf.d/00-keyboard.conf" <<'EOF'
+Section "InputClass"
+        Identifier "system-keyboard"
+        MatchIsKeyboard "on"
+        Option "XkbLayout" "us,ru"
+        Option "XkbModel" "pc105"
+        Option "XkbOptions" "grp:alt_shift_toggle"
+EndSection
 EOF
 
     # ChromeOS & Material 3 Vector FontConfig defaults (sharp subpixel rendering)
@@ -441,6 +474,8 @@ pacman-key --init || true
 pacman-key --populate archlinux || true
 
 useradd -m -G wheel,audio,video,storage -s /bin/zsh gemini || true
+mkdir -p /home/gemini/.config
+cp -f /etc/skel/.config/kxkbrc /home/gemini/.config/kxkbrc || true
 echo "gemini:gemini" | chpasswd
 echo "root:gemini" | chpasswd
 echo "%wheel ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/10-wheel

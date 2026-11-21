@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="oobeBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#20222B" />
+      <stop offset="100%" stop-color="#111216" />
+    </linearGradient>
+    <linearGradient id="blueKnob" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A8C7FA" />
+      <stop offset="100%" stop-color="#4285F4" />
+    </linearGradient>
+    <linearGradient id="amberKnob" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFE082" />
+      <stop offset="100%" stop-color="#FBBC04" />
+    </linearGradient>
+    <linearGradient id="greenKnob" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A8DAB5" />
+      <stop offset="100%" stop-color="#34A853" />
+    </linearGradient>
+    <linearGradient id="sparkGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="50%" stop-color="#FDD663" />
+      <stop offset="100%" stop-color="#FBBC04" />
+    </linearGradient>
+    <filter id="knobShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.5" />
+    </filter>
+  </defs>
+
+  <!-- Material 3 Rounded Squircle Base -->
+  <rect x="24" y="24" width="464" height="464" rx="96" ry="96" fill="url(#oobeBg)" stroke="#393F4F" stroke-width="4" />
+
+  <!-- Configuration Control Board / Settings Sliders -->
+  <g transform="translate(0, 10)">
+    <!-- Slider 1: AI / Gemini Mode (Blue) -->
+    <rect x="110" y="140" width="292" height="18" rx="9" fill="#1A1C22" stroke="#333742" stroke-width="2" />
+    <rect x="110" y="140" width="200" height="18" rx="9" fill="#4285F4" />
+    <circle cx="310" cy="149" r="24" fill="url(#blueKnob)" stroke="#FFFFFF" stroke-width="3" filter="url(#knobShadow)" />
+
+    <!-- Slider 2: System Architecture / Repository (Amber) -->
+    <rect x="110" y="230" width="292" height="18" rx="9" fill="#1A1C22" stroke="#333742" stroke-width="2" />
+    <rect x="110" y="230" width="130" height="18" rx="9" fill="#FBBC04" />
+    <circle cx="240" cy="239" r="24" fill="url(#amberKnob)" stroke="#FFFFFF" stroke-width="3" filter="url(#knobShadow)" />
+
+    <!-- Slider 3: Privacy & Security (Green) -->
+    <rect x="110" y="320" width="292" height="18" rx="9" fill="#1A1C22" stroke="#333742" stroke-width="2" />
+    <rect x="110" y="320" width="230" height="18" rx="9" fill="#34A853" />
+    <circle cx="340" cy="329" r="24" fill="url(#greenKnob)" stroke="#FFFFFF" stroke-width="3" filter="url(#knobShadow)" />
+  </g>
+
+  <!-- Setup Sparkle / Magic Star in Top Right -->
+  <g transform="translate(385, 95)">
+    <path fill="url(#sparkGold)" d="M 0,-40 Q 0,0 40,0 Q 0,0 0,40 Q 0,0 -40,0 Q 0,0 0,-40 Z" />
+    <path fill="#FFFFFF" opacity="0.9" d="M 0,-14 Q 0,0 14,0 Q 0,0 0,14 Q 0,0 -14,0 Q 0,0 0,-14 Z" />
+  </g>
+</svg>

@@ -5,6 +5,8 @@ Material Design 3 Dark PyQt6 wizard for installing GeminiOS to disk.
 """
 
 import json
+import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -431,41 +433,57 @@ class GeminiInstaller(QWidget):
             self.start_install()
 
     def start_install(self):
-        self.stack.setCurrentIndex(3)
-        self._refresh_nav()
-        base_cmd = [
-            "/usr/bin/python3", BACKEND_PATH,
-            "--disk", self.disk_combo.currentData(),
-            "--fs", self.fs_combo.currentText(),
-            "--swap-gb", str(self.swap_combo.currentData()),
-            "--username", self.user_edit.text().strip(),
-            "--password", self.pass_edit.text(),
-            "--hostname", self.host_edit.text().strip() or "geminios",
-            "--timezone", self.tz_combo.currentText(),
-            "--keymap", self.keymap_combo.currentText(),
-        ]
-        if self.api_edit.text().strip():
-            base_cmd.extend(["--api-key", self.api_edit.text().strip()])
-        if self.arch_cb.isChecked():
-            base_cmd.append("--enable-arch")
-        if self.aur_cb.isChecked():
-            base_cmd.append("--enable-aur")
+        try:
+            target_disk = self.disk_combo.currentData()
+            if not target_disk:
+                QMessageBox.warning(self, "No Disk", "Target disk is invalid or not selected.")
+                return
 
-        # Choose elevated executor: direct root > passwordless sudo (live session) > pkexec > sudo
-        if os.geteuid() == 0:
-            cmd = base_cmd
-        elif shutil.which("sudo") and subprocess.run(["sudo", "-n", "true"], capture_output=True).returncode == 0:
-            cmd = ["sudo", "-E"] + base_cmd
-        elif shutil.which("pkexec"):
-            cmd = ["pkexec"] + base_cmd
-        else:
-            cmd = ["sudo", "-E"] + base_cmd
+            self.stack.setCurrentIndex(3)
+            self._refresh_nav()
 
-        self.worker = InstallWorker(cmd)
-        self.worker.progress_sig.connect(self._on_progress)
-        self.worker.log_sig.connect(self.log_box.append)
-        self.worker.done_sig.connect(self._on_done)
-        self.worker.start()
+            backend = BACKEND_PATH
+            if not Path(backend).exists():
+                local_backend = Path(__file__).resolve().parent / "install_backend.py"
+                if local_backend.exists():
+                    backend = str(local_backend)
+
+            py_bin = sys.executable if sys.executable else "/usr/bin/python3"
+            base_cmd = [
+                py_bin, backend,
+                "--disk", target_disk,
+                "--fs", self.fs_combo.currentText(),
+                "--swap-gb", str(self.swap_combo.currentData()),
+                "--username", self.user_edit.text().strip(),
+                "--password", self.pass_edit.text(),
+                "--hostname", self.host_edit.text().strip() or "geminios",
+                "--timezone", self.tz_combo.currentText(),
+                "--keymap", self.keymap_combo.currentText(),
+            ]
+            if self.api_edit.text().strip():
+                base_cmd.extend(["--api-key", self.api_edit.text().strip()])
+            if self.arch_cb.isChecked():
+                base_cmd.append("--enable-arch")
+            if self.aur_cb.isChecked():
+                base_cmd.append("--enable-aur")
+
+            # Choose elevated executor: direct root > passwordless sudo (live session) > pkexec > sudo
+            if hasattr(os, "geteuid") and os.geteuid() == 0:
+                cmd = base_cmd
+            elif shutil.which("sudo") and subprocess.run(["sudo", "-n", "true"], capture_output=True).returncode == 0:
+                cmd = ["sudo", "-E"] + base_cmd
+            elif shutil.which("pkexec"):
+                cmd = ["pkexec"] + base_cmd
+            else:
+                cmd = ["sudo", "-E"] + base_cmd
+
+            self.worker = InstallWorker(cmd)
+            self.worker.progress_sig.connect(self._on_progress)
+            self.worker.log_sig.connect(self.log_box.append)
+            self.worker.done_sig.connect(self._on_done)
+            self.worker.start()
+        except Exception as exc:
+            QMessageBox.critical(self, "Execution Error", f"Failed to start installer backend:\n{exc}")
 
     def _on_progress(self, pct: int, msg: str):
         self.pbar.setValue(pct)

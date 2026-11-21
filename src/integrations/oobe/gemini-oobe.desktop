@@ -3,6 +3,6 @@ Type=Application
 Name=GeminiOS First-Boot Setup
 Comment=Configure Gemini API, local Gemma fallback, and Arch/AUR bridges
 Exec=/usr/bin/python3 /usr/lib/geminios/gemini_oobe.py
-Icon=geminios
+Icon=gemini-oobe
 OnlyShowIn=KDE;
 X-KDE-autostart-phase=2

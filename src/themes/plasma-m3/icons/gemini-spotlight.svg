@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="spotBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1A1C24" />
+      <stop offset="100%" stop-color="#0E0F14" />
+    </linearGradient>
+    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4285F4" />
+      <stop offset="50%" stop-color="#A8C7FA" />
+      <stop offset="100%" stop-color="#9C27B0" />
+    </linearGradient>
+    <linearGradient id="starGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="25%" stop-color="#A8C7FA" />
+      <stop offset="65%" stop-color="#4285F4" />
+      <stop offset="100%" stop-color="#7B1FA2" />
+    </linearGradient>
+    <radialGradient id="centerAura" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#4285F4" stop-opacity="0.35" />
+      <stop offset="60%" stop-color="#9C27B0" stop-opacity="0.12" />
+      <stop offset="100%" stop-color="#1A1C24" stop-opacity="0" />
+    </radialGradient>
+    <filter id="starGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="10" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Material 3 Rounded Squircle Base -->
+  <rect x="24" y="24" width="464" height="464" rx="96" ry="96" fill="url(#spotBg)" stroke="#353B4B" stroke-width="4" />
+
+  <!-- Spotlight Focus Aura & Radar Ring -->
+  <circle cx="256" cy="256" r="170" fill="url(#centerAura)" />
+  <circle cx="256" cy="256" r="160" fill="none" stroke="url(#ringGrad)" stroke-width="3" stroke-dasharray="14, 10" opacity="0.75" />
+  <circle cx="256" cy="256" r="190" fill="none" stroke="#2B303E" stroke-width="2" />
+
+  <!-- Target reticles / Search focus corners -->
+  <path d="M 120,256 L 150,256 M 362,256 L 392,256 M 256,120 L 256,150 M 256,362 L 256,392"
+        stroke="#8AB4F8" stroke-width="3" stroke-linecap="round" opacity="0.6" />
+
+  <!-- Main 4-pointed Gemini Diamond Star -->
+  <g transform="translate(256, 256)">
+    <path fill="url(#starGrad)" filter="url(#starGlow)"
+          d="M 0,-130 Q 0,0 130,0 Q 0,0 0,130 Q 0,0 -130,0 Q 0,0 0,-130 Z" />
+    <!-- Core brilliant white diamond -->
+    <path fill="#FFFFFF" opacity="0.95"
+          d="M 0,-40 Q 0,0 40,0 Q 0,0 0,40 Q 0,0 -40,0 Q 0,0 0,-40 Z" />
+  </g>
+
+  <!-- Accent satellite spark -->
+  <g transform="translate(365, 145)">
+    <path fill="#A8C7FA" opacity="0.85"
+          d="M 0,-24 Q 0,0 24,0 Q 0,0 0,24 Q 0,0 -24,0 Q 0,0 0,-24 Z" />
+    <path fill="#FFFFFF" opacity="0.9"
+          d="M 0,-8 Q 0,0 8,0 Q 0,0 0,8 Q 0,0 -8,0 Q 0,0 0,-8 Z" />
+  </g>
+</svg>

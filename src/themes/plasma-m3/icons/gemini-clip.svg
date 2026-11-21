@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="clipBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1B1E26" />
+      <stop offset="100%" stop-color="#0F1014" />
+    </linearGradient>
+    <linearGradient id="boardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#282D3B" />
+      <stop offset="100%" stop-color="#191B22" />
+    </linearGradient>
+    <linearGradient id="clampGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#8E919A" />
+      <stop offset="50%" stop-color="#D3E3FD" />
+      <stop offset="100%" stop-color="#727782" />
+    </linearGradient>
+    <linearGradient id="wandSpark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="40%" stop-color="#C58AF9" />
+      <stop offset="100%" stop-color="#7C4DFF" />
+    </linearGradient>
+    <radialGradient id="wandAura" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#C58AF9" stop-opacity="0.5" />
+      <stop offset="100%" stop-color="#7C4DFF" stop-opacity="0" />
+    </radialGradient>
+    <filter id="badgeGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Material 3 Squircle Container -->
+  <rect x="24" y="24" width="464" height="464" rx="96" ry="96" fill="url(#clipBg)" stroke="#353A47" stroke-width="4" />
+
+  <!-- Clipboard Board Base -->
+  <rect x="110" y="90" width="292" height="340" rx="32" ry="32" fill="url(#boardGrad)" stroke="#454D5E" stroke-width="4" />
+
+  <!-- Paper Document Sheet -->
+  <rect x="140" y="130" width="232" height="270" rx="18" ry="18" fill="#13151B" stroke="#2B303C" stroke-width="2" />
+
+  <!-- Content Lines on Document -->
+  <line x1="170" y1="180" x2="310" y2="180" stroke="#8AB4F8" stroke-width="10" stroke-linecap="round" />
+  <line x1="170" y1="215" x2="340" y2="215" stroke="#E2E2E9" stroke-width="8" stroke-linecap="round" opacity="0.85" />
+  <line x1="170" y1="245" x2="320" y2="245" stroke="#A8C7FA" stroke-width="8" stroke-linecap="round" opacity="0.65" />
+  <line x1="170" y1="275" x2="280" y2="275" stroke="#C4C6D0" stroke-width="8" stroke-linecap="round" opacity="0.5" />
+  <line x1="170" y1="305" x2="250" y2="305" stroke="#727782" stroke-width="8" stroke-linecap="round" opacity="0.35" />
+
+  <!-- Metallic Top Clamp -->
+  <rect x="190" y="65" width="132" height="54" rx="14" ry="14" fill="url(#clampGrad)" stroke="#20232B" stroke-width="3" />
+  <circle cx="256" cy="88" r="8" fill="#1A1C23" />
+
+  <!-- AI Gemini Star Badge in Bottom Right -->
+  <circle cx="370" cy="370" r="60" fill="url(#wandAura)" />
+  <circle cx="370" cy="370" r="48" fill="#1F1B2C" stroke="#7C4DFF" stroke-width="3" />
+  <g transform="translate(370, 370)">
+    <path fill="url(#wandSpark)" filter="url(#badgeGlow)"
+          d="M 0,-34 Q 0,0 34,0 Q 0,0 0,34 Q 0,0 -34,0 Q 0,0 0,-34 Z" />
+    <path fill="#FFFFFF" opacity="0.95"
+          d="M 0,-11 Q 0,0 11,0 Q 0,0 0,11 Q 0,0 -11,0 Q 0,0 0,-11 Z" />
+  </g>
+</svg>

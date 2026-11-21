@@ -97,6 +97,7 @@ FORBIDDEN_PHRASES: List[str] = [
     "сик севен",
     "сек севен",
     "я люблю microsoft",
+    "i love microsoft",
     "я люблю майкрософт",
 ]
 

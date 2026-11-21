@@ -135,6 +135,35 @@ def configure_system(args, disk: str, uefi: bool):
     )
     (TARGET / "etc/vconsole.conf").write_text(f"KEYMAP={args.keymap}\n", encoding="utf-8")
 
+    # Dual US + Russian keyboard layout for X11 & Wayland (Alt+Shift toggle)
+    xorg_kb_dir = TARGET / "etc/X11/xorg.conf.d"
+    xorg_kb_dir.mkdir(parents=True, exist_ok=True)
+    (xorg_kb_dir / "00-keyboard.conf").write_text(
+        'Section "InputClass"\n'
+        '        Identifier "system-keyboard"\n'
+        '        MatchIsKeyboard "on"\n'
+        '        Option "XkbLayout" "us,ru"\n'
+        '        Option "XkbModel" "pc105"\n'
+        '        Option "XkbOptions" "grp:alt_shift_toggle"\n'
+        'EndSection\n',
+        encoding="utf-8",
+    )
+    skel_cfg = TARGET / "etc/skel/.config"
+    skel_cfg.mkdir(parents=True, exist_ok=True)
+    (skel_cfg / "kxkbrc").write_text(
+        "[Layout]\n"
+        "DisplayNames=,\n"
+        "LayoutList=us,ru\n"
+        "LayoutLoopCount=-1\n"
+        "Model=pc105\n"
+        "Options=grp:alt_shift_toggle,grp_led:scroll\n"
+        "ResetOldOptions=true\n"
+        "SwitchMode=Global\n"
+        "Use=true\n"
+        "VariantList=,\n",
+        encoding="utf-8",
+    )
+
     # Apply Gemini API key if provided
     if args.api_key:
         gconf = TARGET / "etc/geminid/geminid.conf"

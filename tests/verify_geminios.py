@@ -117,6 +117,10 @@ def check_theme_assets():
         "src/live-initcpio/install/geminios-live",
         "src/live-initcpio/hooks/geminios-live",
         "src/integrations/activation/activation_watermark.py",
+        "src/themes/plasma-m3/icons/geminios-installer.svg",
+        "src/themes/plasma-m3/icons/gemini-spotlight.svg",
+        "src/themes/plasma-m3/icons/gemini-clip.svg",
+        "src/themes/plasma-m3/icons/gemini-oobe.svg",
     ]
     for rel in required:
         p = ROOT / rel
