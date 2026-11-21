@@ -1,7 +1,7 @@
 // GeminiOS Material Design 3 Floating Bottom Pill Panel Layout for KDE Plasma 6
 var panel = new Panel("org.kde.panel");
 panel.location = "bottom";
-panel.height = 54;
+panel.height = 56;
 panel.floating = true;
 panel.hiding = "none";
 

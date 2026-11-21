@@ -433,8 +433,8 @@ class GeminiInstaller(QWidget):
     def start_install(self):
         self.stack.setCurrentIndex(3)
         self._refresh_nav()
-        cmd = [
-            "pkexec", "/usr/bin/python3", BACKEND_PATH,
+        base_cmd = [
+            "/usr/bin/python3", BACKEND_PATH,
             "--disk", self.disk_combo.currentData(),
             "--fs", self.fs_combo.currentText(),
             "--swap-gb", str(self.swap_combo.currentData()),
@@ -445,11 +445,21 @@ class GeminiInstaller(QWidget):
             "--keymap", self.keymap_combo.currentText(),
         ]
         if self.api_edit.text().strip():
-            cmd.extend(["--api-key", self.api_edit.text().strip()])
+            base_cmd.extend(["--api-key", self.api_edit.text().strip()])
         if self.arch_cb.isChecked():
-            cmd.append("--enable-arch")
+            base_cmd.append("--enable-arch")
         if self.aur_cb.isChecked():
-            cmd.append("--enable-aur")
+            base_cmd.append("--enable-aur")
+
+        # Choose elevated executor: direct root > passwordless sudo (live session) > pkexec > sudo
+        if os.geteuid() == 0:
+            cmd = base_cmd
+        elif shutil.which("sudo") and subprocess.run(["sudo", "-n", "true"], capture_output=True).returncode == 0:
+            cmd = ["sudo", "-E"] + base_cmd
+        elif shutil.which("pkexec"):
+            cmd = ["pkexec"] + base_cmd
+        else:
+            cmd = ["sudo", "-E"] + base_cmd
 
         self.worker = InstallWorker(cmd)
         self.worker.progress_sig.connect(self._on_progress)
@@ -463,8 +473,9 @@ class GeminiInstaller(QWidget):
 
     def _on_done(self, ok: bool, msg: str):
         if ok:
-            self.status_lbl.setText("✦ GeminiOS 1.0.1 успешно установлен! Залетайте в чат ОПГ «Радуга» (t.me/OPG_R4duga)!")
+            self.status_lbl.setText("✦ GeminiOS 1.0.1 успешно установлен на диск!")
             self.pbar.setValue(100)
+            self.telegram_btn.setText("Сообщество (t.me/OPG_R4duga)")
             self.telegram_btn.setVisible(True)
             self.reboot_btn.setVisible(True)
         else:

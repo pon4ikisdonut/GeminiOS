@@ -376,7 +376,8 @@ class GeminiOOBE(QWidget):
     def _on_finished(self, _ok: bool):
         self.progress.setRange(0, 1)
         self.progress.setValue(1)
-        self.status_lbl.setText("✦ Настройка завершена! Добро пожаловать в комьюнити ОПГ «Радуга» (t.me/OPG_R4duga)!")
+        self.status_lbl.setText("✦ Настройка GeminiOS успешно завершена!")
+        self.telegram_btn.setText("Сообщество (t.me/OPG_R4duga)")
         self.telegram_btn.setVisible(True)
         self.next_btn.setText("Close")
         self.next_btn.setVisible(True)
@@ -386,17 +387,17 @@ class GeminiOOBE(QWidget):
 
 def main() -> int:
     import os
-    if "--force" not in sys.argv:
-        # Never pop up automatically in Live ISO environment
+    # Only suppress if invoked with --autostart and live/marker conditions are met
+    if "--autostart" in sys.argv:
         if (
             Path("/run/archiso").exists()
             or Path("/run/geminios-live").exists()
             or Path("/bootmnt").exists()
             or os.environ.get("USER") == "gemini"
+            or MARKER_FILE.exists()
         ):
             return 0
-        if MARKER_FILE.exists():
-            return 0
+
     app = QApplication(sys.argv)
     w = GeminiOOBE()
     w.show()

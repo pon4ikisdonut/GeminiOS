@@ -154,6 +154,18 @@ Exec=/usr/bin/python3 /usr/lib/geminid/system_watcher.py
 OnlyShowIn=KDE;
 EOF
 
+    # Activation watermark ("Ваш Linux не активирован") overlay
+    install -Dm755 "${ROOT_DIR}/src/integrations/activation/activation_watermark.py" \
+        "${ROOTFS}/usr/lib/geminios/activation_watermark.py"
+    cat > "${ROOTFS}/etc/xdg/autostart/geminios-activation.desktop" <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=GeminiOS Activation Watermark
+Comment=Transparent desktop watermark for non-activated systems
+Exec=/usr/bin/python3 /usr/lib/geminios/activation_watermark.py
+OnlyShowIn=KDE;
+EOF
+
     # Desktop entries for Super+G and Super+Shift+G global shortcuts
     mkdir -p "${ROOTFS}/usr/share/applications"
     cat > "${ROOTFS}/usr/share/applications/geminios-overlay.desktop" <<'EOF'
@@ -311,10 +323,56 @@ EOF
 ColorScheme=GeminiM3Dark
 font=Roboto,10,-1,5,400,0,0,0,0,0
 fixed=JetBrains Mono,10,-1,5,400,0,0,0,0,0
+menuFont=Roboto,10,-1,5,400,0,0,0,0,0
+smallestReadableFont=Roboto,8,-1,5,400,0,0,0,0,0
+toolBarFont=Roboto,10,-1,5,400,0,0,0,0,0
+windowTitleFont=Roboto,10,-1,5,600,0,0,0,0,0
+
+[FontConfig]
+subPixel=rgb
+antiAliasing=true
+hinting=slight
 
 [KDE]
 LookAndFeelPackage=org.geminios.material3.desktop
 widgetStyle=Breeze
+EOF
+
+    # ChromeOS & Material 3 Vector FontConfig defaults (sharp subpixel rendering)
+    mkdir -p "${ROOTFS}/etc/fonts"
+    cat > "${ROOTFS}/etc/fonts/local.conf" <<'EOF'
+<?xml version="1.0"?>
+<!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
+<fontconfig>
+  <match target="pattern">
+    <test qual="any" name="family"><string>sans-serif</string></test>
+    <edit name="family" mode="prepend" binding="strong">
+      <string>Roboto</string>
+      <string>Noto Sans</string>
+      <string>Inter</string>
+    </edit>
+  </match>
+  <match target="pattern">
+    <test qual="any" name="family"><string>serif</string></test>
+    <edit name="family" mode="prepend" binding="strong">
+      <string>Noto Serif</string>
+    </edit>
+  </match>
+  <match target="pattern">
+    <test qual="any" name="family"><string>monospace</string></test>
+    <edit name="family" mode="prepend" binding="strong">
+      <string>JetBrains Mono</string>
+      <string>Noto Sans Mono</string>
+    </edit>
+  </match>
+  <match target="font">
+    <edit name="antialias" mode="assign"><bool>true</bool></edit>
+    <edit name="hinting" mode="assign"><bool>true</bool></edit>
+    <edit name="hintstyle" mode="assign"><const>hintslight</const></edit>
+    <edit name="rgba" mode="assign"><const>rgb</const></edit>
+    <edit name="lcdfilter" mode="assign"><const>lcddefault</const></edit>
+  </match>
+</fontconfig>
 EOF
 
     cat > "${ROOTFS}/etc/skel/.local/share/konsole/GeminiM3Dark.profile" <<'EOF'
@@ -360,7 +418,7 @@ build_iso_native() {
         wayland xorg-xwayland mesa \
         plasma-desktop plasma-workspace kwin sddm dolphin konsole kate \
         plasma-nm plasma-pa powerdevil bluedevil breeze breeze-gtk kde-gtk-config \
-        noto-fonts noto-fonts-emoji ttf-roboto ttf-jetbrains-mono \
+        noto-fonts noto-fonts-emoji noto-fonts-cjk ttf-roboto ttf-jetbrains-mono inter-font ttf-dejavu ttf-liberation \
         plymouth grub efibootmgr parted dosfstools e2fsprogs btrfs-progs rsync squashfs-tools arch-install-scripts
 
     # Ensure pacman config, mirrorlist and keys are definitely present in rootfs

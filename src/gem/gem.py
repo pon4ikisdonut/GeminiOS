@@ -48,6 +48,62 @@ SYSTEM_COMPONENTS = [
     "ollama-gemma",
 ]
 
+# Essential system packages already present in base OS rootfs (never reinstall over root)
+SYSTEM_BASE_PACKAGES = {
+    "filesystem",
+    "glibc",
+    "linux-api-headers",
+    "iana-etc",
+    "tzdata",
+    "systemd",
+    "systemd-libs",
+    "coreutils",
+    "bash",
+    "zsh",
+    "gcc-libs",
+    "shadow",
+    "util-linux",
+    "util-linux-libs",
+    "pam",
+    "pacman",
+    "linux",
+    "linux-headers",
+    "curl",
+    "ca-certificates",
+    "ca-certificates-utils",
+    "openssl",
+}
+
+# Critical system configuration and identity paths that must NEVER be overwritten during package extraction
+PROTECTED_SYSTEM_PATHS = {
+    "etc/resolv.conf",
+    "etc/passwd",
+    "etc/shadow",
+    "etc/group",
+    "etc/gshadow",
+    "etc/shells",
+    "etc/fstab",
+    "etc/hostname",
+    "etc/hosts",
+    "etc/locale.conf",
+    "etc/locale.gen",
+    "etc/os-release",
+    "etc/lsb-release",
+    "etc/geminios-release",
+    "etc/issue",
+    "etc/issue.net",
+    "etc/motd",
+    "etc/sudoers",
+    "etc/sudoers.d",
+    "etc/default/grub",
+    "etc/subuid",
+    "etc/subgid",
+    "boot/vmlinuz-linux",
+    "boot/initramfs-linux.img",
+    "boot/vmlinuz-geminios",
+    "boot/initramfs-geminios.img",
+}
+
 
 def require_root(action: str) -> bool:
     if os.geteuid() != 0:
@@ -228,7 +284,16 @@ class GemPackageManager:
         return self.db_dir / "installed" / f"{name}.json"
 
     def is_installed(self, name: str) -> bool:
-        return self._installed_path(name).exists()
+        if self._installed_path(name).exists():
+            return True
+        if name in SYSTEM_BASE_PACKAGES:
+            return True
+        pacman_db = self.root_dir / "var/lib/pacman/local"
+        if pacman_db.exists():
+            for p in pacman_db.glob(f"{name}-*"):
+                if p.is_dir():
+                    return True
+        return False
 
     def get_installed_package(self, name: str) -> Optional[Dict]:
         p = self._installed_path(name)
@@ -395,19 +460,29 @@ class GemPackageManager:
                 cmd = ["tar", "--warning=no-unknown-keyword", "-xf", str(archive_path), "-C", str(self.root_dir)]
                 for excl in [".PKGINFO", ".BUILDINFO", ".MTREE", ".INSTALL"]:
                     cmd.extend(["--exclude", excl])
+                for ppath in PROTECTED_SYSTEM_PATHS:
+                    cmd.extend(["--exclude", ppath, "--exclude", f"./{ppath}"])
                 subprocess.run(cmd, check=True)
 
                 proc = subprocess.run(["tar", "-tf", str(archive_path)], capture_output=True, text=True, check=True)
                 for line in proc.stdout.splitlines():
                     clean = line.strip().lstrip("./")
                     if clean and not clean.endswith("/") and not clean.startswith("."):
-                        installed_files.append("/" + clean)
+                        if not any(clean == p or clean.startswith(f"{p}/") for p in PROTECTED_SYSTEM_PATHS):
+                            installed_files.append("/" + clean)
             else:
                 with tarfile.open(archive_path, "r:*") as tf:
-                    for member in tf.getmembers():
-                        if member.isfile() and not member.name.startswith("."):
-                            installed_files.append("/" + member.name.lstrip("./"))
-                    tf.extractall(path=self.root_dir)
+                    members = [
+                        m for m in tf.getmembers()
+                        if m.isfile() and not m.name.startswith(".")
+                        and not any(m.name.lstrip("./") == p or m.name.lstrip("./").startswith(f"{p}/") for p in PROTECTED_SYSTEM_PATHS)
+                    ]
+                    for m in members:
+                        installed_files.append("/" + m.name.lstrip("./"))
+                    tf.extractall(path=self.root_dir, members=members)
+
+            # Ensure critical runtime files (DNS, shells, users) were not corrupted
+            self._verify_and_heal_system()
 
         post_install = manifest.get("hooks", {}).get("post_install")
         if post_install:
@@ -826,8 +901,114 @@ sudo gem install example-tool
             print(f"\n[Gemini Doctor]\n{ai_fix}\n")
         return 0
 
+    def _verify_and_heal_system(self) -> None:
+        """Self-healing safety net: ensure DNS, shells, and user files remain healthy."""
+        resolv_path = self.root_dir / "etc/resolv.conf"
+        try:
+            is_empty = not resolv_path.exists() or (resolv_path.is_file() and resolv_path.stat().st_size == 0)
+            if is_empty:
+                stub = self.root_dir / "run/systemd/resolve/stub-resolv.conf"
+                if stub.exists():
+                    resolv_path.unlink(missing_ok=True)
+                    try:
+                        resolv_path.symlink_to("/run/systemd/resolve/stub-resolv.conf")
+                    except Exception:
+                        resolv_path.write_text("nameserver 1.1.1.1\nnameserver 8.8.8.8\n", encoding="utf-8")
+                else:
+                    resolv_path.unlink(missing_ok=True)
+                    resolv_path.write_text("nameserver 1.1.1.1\nnameserver 8.8.8.8\nnameserver 2606:4700:4700::1111\n", encoding="utf-8")
+        except Exception:
+            pass
+
+        shells_path = self.root_dir / "etc/shells"
+        try:
+            if shells_path.exists():
+                content = shells_path.read_text(encoding="utf-8", errors="ignore")
+                needed = ["/bin/bash", "/bin/zsh", "/usr/bin/bash", "/usr/bin/zsh"]
+                missing = [s for s in needed if s not in content]
+                if missing:
+                    shells_path.write_text(content.rstrip() + "\n" + "\n".join(missing) + "\n", encoding="utf-8")
+            else:
+                shells_path.write_text("/bin/sh\n/bin/bash\n/bin/zsh\n/usr/bin/bash\n/usr/bin/zsh\n", encoding="utf-8")
+        except Exception:
+            pass
+
+    def gem_env(self, args: Optional[List[str]] = None) -> int:
+        """RubyGems compatibility stub for makepkg, bundler, and build scripts."""
+        ruby_path = shutil.which("ruby")
+        if ruby_path:
+            try:
+                proc = subprocess.run([ruby_path, "-S", "gem", "env"] + (args or []), capture_output=True, text=True)
+                if proc.returncode == 0:
+                    print(proc.stdout)
+                    return 0
+            except Exception:
+                pass
+        print("RubyGems Environment:")
+        print("  - RUBYGEMS VERSION: 3.5.0")
+        print("  - RUBY VERSION: 3.3.0")
+        print("  - INSTALLATION DIRECTORY: /var/lib/gem")
+        print("  - GEMINIOS PACKAGE MANAGER: Active (independent native manager)")
+        return 0
+
+    def activate(self, key: str = "") -> int:
+        """Activate GeminiOS Cognitive Runtime and dismiss activation watermark."""
+        token = key.strip() if key else f"GEMINIOS-PRO-{int(time.time())}"
+        try:
+            Path("/etc/geminios-activated").write_text(f"ACTIVATED=true\nKEY={token}\nTIMESTAMP={int(time.time())}\n", encoding="utf-8")
+        except Exception:
+            pass
+        user_act = Path.home() / ".config/geminios-activated"
+        try:
+            user_act.parent.mkdir(parents=True, exist_ok=True)
+            user_act.write_text(f"ACTIVATED=true\nKEY={token}\nTIMESTAMP={int(time.time())}\n", encoding="utf-8")
+        except Exception:
+            pass
+        print("✦ GeminiOS 1.0.1 (Spark) успешно активирован!")
+        print(f"  Ключ активации: {token}")
+        print("  Когнитивный рантайм: Полная лицензия Gemini Pro.")
+        print("  Водяной знак активации удалён с рабочего стола.")
+        subprocess.run(["pkill", "-f", "activation_watermark.py"], check=False)
+        return 0
+
 
 def main() -> int:
+    import difflib
+
+    ALIASES = {
+        "i": "install",
+        "in": "install",
+        "is": "install",
+        "inst": "install",
+        "u": "update",
+        "sync": "update",
+        "up": "upgrade",
+        "upg": "upgrade",
+        "rm": "remove",
+        "del": "remove",
+        "s": "search",
+        "se": "search",
+        "ls": "list",
+    }
+    KNOWN_COMMANDS = [
+        "update", "upgrade", "install", "remove", "search",
+        "info", "list", "system", "repo", "doctor", "activate", "env"
+    ]
+
+    # Pre-process arguments for aliases and friendly suggestions
+    raw_args = sys.argv[1:]
+    for idx, arg in enumerate(raw_args):
+        if not arg.startswith("-"):
+            if arg in ALIASES:
+                raw_args[idx] = ALIASES[arg]
+            elif arg not in KNOWN_COMMANDS and not any(raw_args[max(0, idx - 1)].startswith(opt) for opt in ("--config", "-c")):
+                matches = difflib.get_close_matches(arg, KNOWN_COMMANDS, n=1, cutoff=0.5)
+                suggestion = f" Did you mean `gem {matches[0]}`?" if matches else ""
+                print(f"[gem] Error: Unknown command '{arg}'.{suggestion}", file=sys.stderr)
+                print(f"Valid commands: {', '.join(KNOWN_COMMANDS)}", file=sys.stderr)
+                return 1
+            break
+
     parser = argparse.ArgumentParser(
         prog="gem",
         description="GeminiOS Independent Package Manager (GitHub Manifests + Arch/AUR Bridge + Gemini AI)",
@@ -835,7 +1016,7 @@ def main() -> int:
     parser.add_argument("--config", type=Path, default=None, help="Path to gem.conf")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    sub.add_parser("update", help="Sync GitHub manifest repositories & Arch bridge")
+    sub.add_parser("update", help="Sync GitHub manifest repositories & upstream mirrors")
     
     p_upg = sub.add_parser("upgrade", help="Upgrade system packages & GeminiOS components")
     p_upg.add_argument("-y", "--noconfirm", action="store_true")
@@ -891,7 +1072,13 @@ def main() -> int:
 
     sub.add_parser("doctor", help="Check package manager health with Gemini AI")
 
-    args = parser.parse_args()
+    p_act = sub.add_parser("activate", help="Activate GeminiOS license / cognitive runtime")
+    p_act.add_argument("key", nargs="?", default="", help="Activation key (optional)")
+
+    p_env = sub.add_parser("env", help="RubyGems environment compatibility hook for makepkg")
+    p_env.add_argument("env_args", nargs="*", help="Environment arguments")
+
+    args = parser.parse_args(raw_args)
     pm = GemPackageManager(conf_path=args.config)
 
     if args.command == "update":
@@ -928,6 +1115,10 @@ def main() -> int:
             return pm.repo_cmd("init", target=args.path, source=args.name)
     if args.command == "doctor":
         return pm.doctor()
+    if args.command == "activate":
+        return pm.activate(args.key)
+    if args.command == "env":
+        return pm.gem_env(args.env_args)
     return 0
 
 

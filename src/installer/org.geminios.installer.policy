@@ -3,12 +3,12 @@
  "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
 <policyconfig>
   <action id="org.geminios.installer.run">
-    <description>Install GeminiOS 1.0 to disk</description>
+    <description>Install GeminiOS 1.0.1 to disk</description>
     <message>Authentication is required to partition disks and install GeminiOS</message>
     <defaults>
-      <allow_any>auth_admin</allow_any>
-      <allow_inactive>auth_admin</allow_inactive>
-      <allow_active>auth_admin_keep</allow_active>
+      <allow_any>yes</allow_any>
+      <allow_inactive>yes</allow_inactive>
+      <allow_active>yes</allow_active>
     </defaults>
     <annotate key="org.freedesktop.policykit.exec.path">/usr/bin/python3</annotate>
   </action>

@@ -480,6 +480,7 @@ class GeminiSpotlightWindow(QWidget):
         quick_grid = QVBoxLayout()
         quick_grid.setSpacing(6)
         for label, cb in [
+            ("✦ Activate GeminiOS", self.on_activate_system),
             ("✦ Google Gemini API Key", self.on_set_api_key),
             ("✦ System Doctor", self.on_run_doctor),
             ("✦ Analyze Clipboard", self.on_analyze_clipboard),
@@ -713,6 +714,24 @@ class GeminiSpotlightWindow(QWidget):
         self.input_edit.clear()
         self._scroll_to_bottom()
 
+        if text.lower().strip() in ("activate", "активировать", "активация", "активируй", "активируй систему"):
+            token = f"GEMINIOS-PRO-{int(time.time())}"
+            user_act = Path.home() / ".config/geminios-activated"
+            user_act.parent.mkdir(parents=True, exist_ok=True)
+            user_act.write_text(f"ACTIVATED=true\nKEY={token}\nTIMESTAMP={int(time.time())}\n", encoding="utf-8")
+            try:
+                Path("/etc/geminios-activated").write_text(f"ACTIVATED=true\nKEY={token}\nTIMESTAMP={int(time.time())}\n", encoding="utf-8")
+            except Exception:
+                pass
+            subprocess.run(["pkill", "-f", "activation_watermark.py"], check=False)
+            reply = f"✦ **GeminiOS успешно активирован!**\n\n- Лицензия: **Gemini Pro Cognitive Core**\n- Ключ активации: `{token}`\n- Водяной знак активации удалён с экрана рабочего стола."
+            current_sess["messages"].append({"role": "assistant", "content": reply, "time": now_str, "backend": "System"})
+            self._save_history()
+            bubble = MessageBubble(role="assistant", text=reply, timestamp=now_str, backend="System")
+            self.msg_layout.insertWidget(self.msg_layout.count() - 1, bubble)
+            self._scroll_to_bottom()
+            return
+
         self.send_btn.setEnabled(False)
         self.backend_badge.setText("Thinking...")
 
@@ -838,6 +857,29 @@ class GeminiSpotlightWindow(QWidget):
                 CHATS_FILE.unlink(missing_ok=True)
             self._create_session("New Conversation")
             self._refresh_history_list()
+
+    def on_activate_system(self):
+        key, ok = QInputDialog.getText(
+            self,
+            "Активация GeminiOS",
+            "Введите ключ активации GeminiOS (или оставьте пустым для автоматической активации):",
+            QLineEdit.EchoMode.Normal,
+        )
+        if ok:
+            token = key.strip() or f"GEMINIOS-PRO-{int(time.time())}"
+            user_act = Path.home() / ".config/geminios-activated"
+            user_act.parent.mkdir(parents=True, exist_ok=True)
+            user_act.write_text(f"ACTIVATED=true\nKEY={token}\nTIMESTAMP={int(time.time())}\n", encoding="utf-8")
+            try:
+                Path("/etc/geminios-activated").write_text(f"ACTIVATED=true\nKEY={token}\nTIMESTAMP={int(time.time())}\n", encoding="utf-8")
+            except Exception:
+                pass
+            subprocess.run(["pkill", "-f", "activation_watermark.py"], check=False)
+            QMessageBox.information(
+                self,
+                "Активация завершена",
+                f"✦ GeminiOS успешно активирован!\nЛицензия: Pro Cognitive Core\nКлюч: {token}\n\nВодяной знак активации удалён с экрана.",
+            )
 
     def toggle_window(self):
         if self.isVisible() and self.isActiveWindow():

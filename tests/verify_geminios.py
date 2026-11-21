@@ -49,7 +49,17 @@ def check_configs_and_manifests():
         assert manifest_path.exists(), f"Missing manifest {manifest_path}"
         m = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
         assert m["package"]["name"] == name
-    print(f"[PASS] Configs and {len(pkgs)} GitHub package manifests valid.")
+
+    # Verify package manager protected blacklist & base package preservation
+    sys.path.insert(0, str(ROOT / "src/gem"))
+    import gem
+    assert "etc/resolv.conf" in gem.PROTECTED_SYSTEM_PATHS
+    assert "etc/passwd" in gem.PROTECTED_SYSTEM_PATHS
+    assert "etc/shells" in gem.PROTECTED_SYSTEM_PATHS
+    assert "filesystem" in gem.SYSTEM_BASE_PACKAGES
+    assert "glibc" in gem.SYSTEM_BASE_PACKAGES
+
+    print(f"[PASS] Configs, {len(pkgs)} GitHub package manifests, and gem safety barriers valid.")
 
 
 def check_agent_hwcheck_and_panic_guard():
@@ -106,6 +116,7 @@ def check_theme_assets():
         "src/themes/plasma-m3/wallpapers/GeminiM3Dark/contents/images/1920x1080.png",
         "src/live-initcpio/install/geminios-live",
         "src/live-initcpio/hooks/geminios-live",
+        "src/integrations/activation/activation_watermark.py",
     ]
     for rel in required:
         p = ROOT / rel
