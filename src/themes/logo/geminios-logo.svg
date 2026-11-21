@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="geminiGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E3EEFF" />
+      <stop offset="25%" stop-color="#A8C7FA" />
+      <stop offset="65%" stop-color="#7Cacf8" />
+      <stop offset="100%" stop-color="#9C27B0" />
+    </linearGradient>
+    <radialGradient id="geminiAura" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#A8C7FA" stop-opacity="0.6" />
+      <stop offset="50%" stop-color="#7Cacf8" stop-opacity="0.2" />
+      <stop offset="100%" stop-color="#7Cacf8" stop-opacity="0" />
+    </radialGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Google G base paths, scaled to 512x512 with center alignment -->
+  <g transform="translate(48, 56) scale(17.5)">
+    <!-- Blue section: crossbar and lower right arc -->
+    <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+    <!-- Green section: bottom arc -->
+    <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
+    <!-- Yellow section: left arc -->
+    <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.14-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+    <!-- Red section: top arc terminating into the star -->
+    <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+  </g>
+
+  <!-- Gemini Sparkle Star crowned at the upper end of G (x=398, y=111) -->
+  <!-- Ambient glow circle -->
+  <circle cx="398" cy="111" r="52" fill="url(#geminiAura)" />
+
+  <!-- The iconic 4-pointed Gemini Diamond Sparkle -->
+  <g transform="translate(398, 111)">
+    <!-- Star body -->
+    <path fill="url(#geminiGrad)" filter="url(#glow)" d="M 0,-62 Q 0,0 62,0 Q 0,0 0,62 Q 0,0 -62,0 Q 0,0 0,-62 Z" />
+    <!-- White core highlight -->
+    <path fill="#FFFFFF" opacity="0.95" d="M 0,-20 Q 0,0 20,0 Q 0,0 0,20 Q 0,0 -20,0 Q 0,0 0,-20 Z" />
+    <!-- Secondary miniature spark -->
+    <g transform="translate(48, -48)">
+      <path fill="#A8C7FA" opacity="0.85" d="M 0,-14 Q 0,0 14,0 Q 0,0 0,14 Q 0,0 -14,0 Q 0,0 0,-14 Z" />
+    </g>
+  </g>
+</svg>

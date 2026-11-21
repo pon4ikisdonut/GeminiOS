@@ -1,0 +1,8 @@
+{
+  "KPlugin": {
+    "Authors": [{ "Name": "GeminiOS" }],
+    "Id": "GeminiM3Dark",
+    "License": "MIT",
+    "Name": "GeminiOS Material 3 Dark"
+  }
+}

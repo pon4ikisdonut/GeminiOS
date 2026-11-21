@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Install GeminiOS 1.0
+Comment=Install GeminiOS 1.0 (Spark) to your hard drive or SSD
+Exec=/usr/bin/gemini-installer
+Icon=system-software-install
+Terminal=false
+Categories=System;

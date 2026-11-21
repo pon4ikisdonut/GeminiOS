@@ -1,0 +1,25 @@
+#!/bin/bash
+
+build() {
+    add_module "squashfs"
+    add_module "overlay"
+    add_module "loop"
+    add_module "isofs"
+    add_module "sr_mod"
+    add_module "sd_mod"
+    add_module "cdrom"
+    add_module "virtio_blk"
+    add_module "virtio_scsi"
+    add_module "ahci"
+    add_module "usb_storage"
+    add_binary "mount"
+    add_binary "losetup"
+    add_binary "blkid"
+    add_runscript
+}
+
+help() {
+    cat <<HELPEOF
+This hook mounts the GeminiOS Live SquashFS image with an in-memory OverlayFS.
+HELPEOF
+}

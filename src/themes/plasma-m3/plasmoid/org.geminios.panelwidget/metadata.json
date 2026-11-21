@@ -1,0 +1,14 @@
+{
+  "KPlugin": {
+    "Authors": [{ "Name": "GeminiOS" }],
+    "Category": "System Information",
+    "Description": "GeminiOS AI Status & Quick Launcher Widget (Cloud / Local Gemma)",
+    "Icon": "geminios",
+    "Id": "org.geminios.panelwidget",
+    "License": "MIT",
+    "Name": "GeminiOS AI Status",
+    "Version": "1.0"
+  },
+  "KPackageStructure": "Plasma/Applet",
+  "X-Plasma-API-Minimum-Version": "6.0"
+}

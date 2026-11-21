@@ -1,0 +1,9 @@
+[SddmGreeterTheme]
+Name=GeminiOS Material 3 Dark
+Description=Custom Material Design 3 Dark login screen matching GeminiOS Plymouth boot splash
+Author=GeminiOS
+Version=1.0
+MainScript=Main.qml
+ConfigFile=theme.conf
+Type=sddm-theme
+QtVersion=6

@@ -1,0 +1,49 @@
+# Build output & temporary workspaces
+work/
+out/
+iso/
+rootfs/
+*.iso
+*.iso.sha256
+*.tar.gz
+*.sqfs
+*.squashfs
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDE & OS files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Caches
+.cache/
+.pytest_cache/

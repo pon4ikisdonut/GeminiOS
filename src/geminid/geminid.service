@@ -1,0 +1,18 @@
+[Unit]
+Description=GeminiOS System AI Daemon (Gemini API + Gemma Fallback + Agent Engine)
+After=network-online.target ollama.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /usr/lib/geminid/geminid.py --config /etc/geminid/geminid.conf
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=2s
+KillMode=mixed
+RuntimeDirectory=geminid
+LogsDirectory=geminid
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

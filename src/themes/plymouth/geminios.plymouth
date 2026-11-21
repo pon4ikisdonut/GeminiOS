@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=GeminiOS Dark
+Description=GeminiOS OLED Dark boot splash — GeminiOS, powered by Linux / With Love, With Gemini
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/geminios
+ScriptFile=/usr/share/plymouth/themes/geminios/geminios.script

@@ -1,0 +1,105 @@
+/* GeminiOS Material Design 3 Dark (ChromeOS Style) GTK3/GTK4 Tokens & Rules */
+@define-color window_bg_color #0E1015;
+@define-color window_fg_color #E2E2E9;
+@define-color view_bg_color #14171E;
+@define-color view_fg_color #E2E2E9;
+@define-color headerbar_bg_color #181B22;
+@define-color headerbar_fg_color #E2E2E9;
+@define-color card_bg_color #1D212A;
+@define-color card_fg_color #E2E2E9;
+@define-color accent_bg_color #A8C7FA;
+@define-color accent_fg_color #062E6F;
+@define-color accent_color #A8C7FA;
+@define-color destructive_bg_color #FFB4AB;
+@define-color destructive_fg_color #690005;
+
+window, .background {
+    background-color: @window_bg_color;
+    color: @window_fg_color;
+    font-family: 'Roboto', 'Noto Sans', sans-serif;
+}
+
+headerbar {
+    background-color: @headerbar_bg_color;
+    border-bottom: 1px solid #282C36;
+    padding: 6px 10px;
+}
+
+/* ChromeOS Material 3 Pill Buttons */
+button {
+    border-radius: 18px;
+    background-color: #242832;
+    color: #E2E2E9;
+    border: 1px solid #363B48;
+    padding: 7px 18px;
+    font-weight: 500;
+}
+
+button:hover {
+    background-color: #2F3442;
+    border-color: #A8C7FA;
+}
+
+button.suggested-action, button.primary {
+    background-color: #A8C7FA;
+    color: #062E6F;
+    border: none;
+    font-weight: 600;
+}
+
+button.suggested-action:hover, button.primary:hover {
+    background-color: #C2E7FF;
+}
+
+/* ChromeOS Text Inputs */
+entry {
+    border-radius: 14px;
+    background-color: #161920;
+    color: #E2E2E9;
+    border: 1px solid #363B48;
+    padding: 8px 14px;
+}
+
+entry:focus {
+    border: 2px solid #A8C7FA;
+    background-color: #1A1E26;
+}
+
+/* ChromeOS Cards & Dialogs */
+.card, dialog, popover, menu {
+    border-radius: 18px;
+    background-color: @card_bg_color;
+    color: @card_fg_color;
+    border: 1px solid #363B48;
+}
+
+/* Switches (Pill Toggle) */
+switch {
+    border-radius: 16px;
+    background-color: #2F3442;
+}
+
+switch:checked {
+    background-color: #A8C7FA;
+}
+
+switch slider {
+    border-radius: 14px;
+    background-color: #E2E2E9;
+}
+
+/* Minimalist ChromeOS Scrollbars */
+scrollbar {
+    background: transparent;
+}
+
+scrollbar slider {
+    background-color: #383D4A;
+    border-radius: 6px;
+    min-width: 6px;
+    min-height: 6px;
+}
+
+scrollbar slider:hover {
+    background-color: #A8C7FA;
+}

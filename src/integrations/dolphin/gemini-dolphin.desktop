@@ -1,0 +1,25 @@
+[Desktop Entry]
+Type=Service
+MimeType=text/plain;application/json;application/x-shellscript;text/x-python;text/x-csrc;text/x-c++src;text/markdown;application/pdf;
+Actions=askGemini;summarizeGemini;reviewCodeGemini;translateGemini;
+X-KDE-Submenu=GeminiOS AI
+
+[Desktop Action askGemini]
+Name=Ask Gemini about this file
+Icon=dialog-information
+Exec=konsole --hold -e gemini -f %f "Explain what this file does and highlight anything important."
+
+[Desktop Action summarizeGemini]
+Name=Summarize with Gemini
+Icon=document-preview
+Exec=konsole --hold -e gemini -f %f "Provide a concise bullet-point summary of this file."
+
+[Desktop Action reviewCodeGemini]
+Name=Review Code / Find Bugs with Gemini
+Icon=tools-check-spelling
+Exec=konsole --hold -e gemini -f %f "Review this code for bugs, security issues, and improvements."
+
+[Desktop Action translateGemini]
+Name=Translate to Russian with Gemini
+Icon=preferences-desktop-locale
+Exec=konsole --hold -e gemini -f %f "Translate the contents of this file naturally into Russian."

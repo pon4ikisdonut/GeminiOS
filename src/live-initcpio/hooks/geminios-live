@@ -1,0 +1,39 @@
+#!/usr/bin/ash
+
+run_hook() {
+    if [ -n "${geminios_label}" ]; then
+        mount_handler="geminios_live_mount"
+    fi
+}
+
+geminios_live_mount() {
+    msg ":: Mounting GeminiOS Live medium (LABEL=${geminios_label})..."
+    mkdir -p /run/geminios/medium /run/geminios/sfs /run/geminios/overlay
+
+    local dev=""
+    local tries=0
+    while [ -z "${dev}" ] && [ "${tries}" -lt 30 ]; do
+        dev="$(blkid -L "${geminios_label}" 2>/dev/null || true)"
+        if [ -z "${dev}" ]; then
+            sleep 0.5
+            tries=$((tries + 1))
+        fi
+    done
+
+    if [ -z "${dev}" ]; then
+        echo "ERROR: Could not find GeminiOS Live medium with LABEL=${geminios_label}"
+        launch_interactive_shell
+        return 1
+    fi
+
+    mount -o ro "${dev}" /run/geminios/medium
+    mount -t squashfs -o ro,loop /run/geminios/medium/live/filesystem.squashfs /run/geminios/sfs
+    mount -t tmpfs -o size=75% tmpfs /run/geminios/overlay
+    mkdir -p /run/geminios/overlay/upper /run/geminios/overlay/work
+
+    mount -t overlay overlay \
+        -o lowerdir=/run/geminios/sfs,upperdir=/run/geminios/overlay/upper,workdir=/run/geminios/overlay/work \
+        "$1"
+
+    mount --make-rprivate "$1" || true
+}

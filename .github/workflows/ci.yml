@@ -1,0 +1,38 @@
+name: GeminiOS CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  verify:
+    name: Verify Codebase, Manifests & Assets
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install verification dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # Ensure py_compile and tomllib are available (standard library in 3.11+)
+
+      - name: Run GeminiOS Verification Suite
+        run: |
+          python tests/verify_geminios.py
+
+      - name: Validate Shell & Hook Scripts
+        run: |
+          bash -n build.sh
+          bash -n src/gem/bash-completion.sh
+          bash -n src/integrations/shell/geminios.bash
+          bash -n src/live-initcpio/install/geminios-live
+          bash -n src/live-initcpio/hooks/geminios-live

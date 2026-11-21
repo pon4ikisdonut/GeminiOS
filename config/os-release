@@ -1,0 +1,14 @@
+NAME="GeminiOS"
+PRETTY_NAME="GeminiOS 1.0.1 (Spark) Material You"
+ID=geminios
+ID_LIKE=arch
+VERSION_ID="1.0.1"
+VERSION="1.0.1 (Spark)"
+VERSION_CODENAME=spark
+ANSI_COLOR="38;2;168;199;250"
+HOME_URL="https://github.com/pon4ikisdonut/geminios-repo"
+DOCUMENTATION_URL="https://github.com/pon4ikisdonut/geminios-repo"
+SUPPORT_URL="https://github.com/pon4ikisdonut/geminios-repo/issues"
+BUG_REPORT_URL="https://github.com/pon4ikisdonut/geminios-repo/issues"
+LOGO=geminios-launcher
+TAGLINE="GeminiOS, powered by Linux — With Love, With Gemini"

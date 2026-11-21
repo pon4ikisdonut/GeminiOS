@@ -1,0 +1,12 @@
+[General]
+OutlineIntensity=OutlineMedium
+ShadowSize=ShadowVeryLarge
+ShadowStrength=160
+CornerRadius=18
+
+[Windeco]
+ButtonSize=ButtonLarge
+DrawBackgroundGradient=false
+DrawBorderOnMaximizedWindows=false
+OutlineCloseButton=true
+TitleAlignment=AlignCenterFullWidth

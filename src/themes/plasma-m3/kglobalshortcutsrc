@@ -1,0 +1,7 @@
+[geminios-overlay.desktop]
+_k_friendly_name=GeminiOS Spotlight Overlay
+_launch=Meta+G,none,Launch GeminiOS Spotlight Overlay
+
+[geminios-clip.desktop]
+_k_friendly_name=GeminiOS Clipboard AI
+_launch=Meta+Shift+G,none,Explain Clipboard with Gemini

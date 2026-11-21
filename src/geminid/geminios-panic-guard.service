@@ -1,0 +1,15 @@
+[Unit]
+Description=GeminiOS Keyboard Panic Guard Daemon
+After=systemd-udevd.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /usr/lib/geminid/panic_guard.py
+Restart=always
+RestartSec=2
+TimeoutStopSec=2s
+KillMode=mixed
+User=root
+
+[Install]
+WantedBy=multi-user.target

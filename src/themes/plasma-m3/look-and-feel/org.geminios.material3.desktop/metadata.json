@@ -1,0 +1,12 @@
+{
+  "KPlugin": {
+    "Authors": [{ "Name": "GeminiOS" }],
+    "Category": "Global Themes (Plasma 6)",
+    "Description": "Google Material Design 3 Dark Global Theme for GeminiOS",
+    "Id": "org.geminios.material3.desktop",
+    "License": "MIT",
+    "Name": "GeminiOS Material 3 Dark",
+    "Version": "1.0"
+  },
+  "KPackageStructure": "Plasma/LookAndFeel"
+}

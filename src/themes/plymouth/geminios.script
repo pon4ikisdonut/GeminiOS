@@ -1,0 +1,54 @@
+# GeminiOS Dark Plymouth Boot Animation Script
+# OLED Dark background (#0B0D11) + Google/Gemini logo + M3 spinner + bottom signature
+
+Window.SetBackgroundTopColor(0.043, 0.051, 0.067);
+Window.SetBackgroundBottomColor(0.043, 0.051, 0.067);
+
+screen_w = Window.GetWidth();
+screen_h = Window.GetHeight();
+
+# Center Google/Gemini emblem
+logo.image = Image("google_gemini_logo.png");
+logo.sprite = Sprite(logo.image);
+logo.sprite.SetX(screen_w / 2 - logo.image.GetWidth() / 2);
+logo.sprite.SetY(screen_h * 0.42 - logo.image.GetHeight() / 2);
+logo.sprite.SetZ(10);
+
+# Bottom signature: "GeminiOS, powered by Linux" / "With Love, With Gemini"
+footer.image = Image("footer_text.png");
+footer.sprite = Sprite(footer.image);
+footer.sprite.SetX(screen_w / 2 - footer.image.GetWidth() / 2);
+footer.sprite.SetY(screen_h - footer.image.GetHeight() - 48);
+footer.sprite.SetZ(10);
+
+# 24-frame smooth Material 3 spinner
+for (i = 0; i < 24; i++) {
+    if (i < 10)
+        fname = "spinner_0" + i + ".png";
+    else
+        fname = "spinner_" + i + ".png";
+    spinner_images[i] = Image(fname);
+}
+
+spinner.sprite = Sprite();
+spinner.sprite.SetImage(spinner_images[0]);
+spinner.sprite.SetX(screen_w / 2 - spinner_images[0].GetWidth() / 2);
+spinner.sprite.SetY(screen_h * 0.42 + logo.image.GetHeight() / 2 + 34);
+spinner.sprite.SetZ(10);
+
+frame = 0;
+fun refresh_callback() {
+    frame = (frame + 1) % 24;
+    spinner.sprite.SetImage(spinner_images[frame]);
+}
+Plymouth.SetRefreshFunction(refresh_callback);
+
+# Status message (e.g. fsck / boot messages)
+message_sprite = Sprite();
+message_sprite.SetPosition(screen_w / 2, screen_h - 175, 20);
+fun message_callback(text) {
+    img = Image.Text(text, 0.66, 0.78, 0.98, 0.9, "Noto Sans 11");
+    message_sprite.SetImage(img);
+    message_sprite.SetX(screen_w / 2 - img.GetWidth() / 2);
+}
+Plymouth.SetMessageFunction(message_callback);
