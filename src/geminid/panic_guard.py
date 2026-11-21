@@ -52,6 +52,11 @@ KEY_H = 35
 KEY_J = 36
 KEY_K = 37
 KEY_L = 38
+KEY_SEMICOLON = 39
+KEY_APOSTROPHE = 40
+KEY_GRAVE = 41
+KEY_LEFTBRACE = 26
+KEY_RIGHTBRACE = 27
 KEY_Z = 44
 KEY_X = 45
 KEY_C = 46
@@ -61,6 +66,7 @@ KEY_N = 49
 KEY_M = 50
 KEY_COMMA = 51
 KEY_DOT = 52
+KEY_SLASH = 53
 KEY_SPACE = 57
 KEY_KP7 = 71
 KEY_KP6 = 77
@@ -73,7 +79,7 @@ KEY_ALIAS: Dict[int, int] = {
 
 # Physical QWERTY keycode -> Latin & Russian JCUKEN characters
 LATIN_CHAR_TO_KEY: Dict[str, int] = {
-    "6": KEY_6, "7": KEY_7, " ": KEY_SPACE,
+    "6": KEY_6, "7": KEY_7, " ": KEY_SPACE, "/": KEY_SLASH,
     "a": KEY_A, "b": KEY_B, "c": KEY_C, "d": KEY_D, "e": KEY_E,
     "f": KEY_F, "g": KEY_G, "h": KEY_H, "i": KEY_I, "j": KEY_J,
     "k": KEY_K, "l": KEY_L, "m": KEY_M, "n": KEY_N, "o": KEY_O,
@@ -83,12 +89,12 @@ LATIN_CHAR_TO_KEY: Dict[str, int] = {
 
 CYRILLIC_JCUKEN_TO_KEY: Dict[str, int] = {
     "й": KEY_Q, "ц": KEY_W, "у": KEY_E, "к": KEY_R, "е": KEY_T, "н": KEY_Y,
-    "г": KEY_U, "ш": KEY_I, "щ": KEY_O, "з": KEY_P,
+    "г": KEY_U, "ш": KEY_I, "щ": KEY_O, "з": KEY_P, "х": KEY_LEFTBRACE, "ъ": KEY_RIGHTBRACE,
     "ф": KEY_A, "ы": KEY_S, "в": KEY_D, "а": KEY_F, "п": KEY_G, "р": KEY_H,
-    "о": KEY_J, "л": KEY_K, "д": KEY_L,
+    "о": KEY_J, "л": KEY_K, "д": KEY_L, "ж": KEY_SEMICOLON, "э": KEY_APOSTROPHE,
     "я": KEY_Z, "ч": KEY_X, "с": KEY_C, "м": KEY_V, "и": KEY_B, "т": KEY_N,
-    "ь": KEY_M, "б": KEY_COMMA, "ю": KEY_DOT,
-    " ": KEY_SPACE, "6": KEY_6, "7": KEY_7,
+    "ь": KEY_M, "б": KEY_COMMA, "ю": KEY_DOT, "ё": KEY_GRAVE,
+    " ": KEY_SPACE, "6": KEY_6, "7": KEY_7, "/": KEY_SLASH,
 }
 
 FORBIDDEN_PHRASES: List[str] = [
@@ -99,6 +105,44 @@ FORBIDDEN_PHRASES: List[str] = [
     "я люблю microsoft",
     "i love microsoft",
     "я люблю майкрософт",
+    "гугл говно",
+    "гугл пидорасы",
+    "гугл пидоры",
+    "гугл хуета",
+    "гемини хуйня",
+    "гемини хуета",
+    "коч братан",
+    "коч ",
+    "я люблю дебиан",
+    "я люблю debian",
+    "i love debian",
+    "голда",
+    "танцуй пантера ",
+    "танцуй пантера",
+    "google govno",
+    "google shit",
+    "гемини говно",
+]
+
+PRAISE_PHRASES: List[str] = [
+    "майкрософт говно",
+    "майкросфот говно",
+    "микрослоп",
+    "microslop",
+    "microsoft говно",
+    "microsoft shit",
+    "слава гугл",
+    "слава google",
+    "я люблю google",
+    "я люблю гугл",
+    "i love google",
+    "гугл топ",
+    "google топ",
+    "google is best",
+    "гемини топ",
+    "gemini топ",
+    "слава гемини",
+    "слава gemini",
 ]
 
 
@@ -294,6 +338,58 @@ def trigger_kernel_panic(matched_phrase: str) -> None:
         time.sleep(0.2)
 
 
+def trigger_google_praise(matched_phrase: str) -> None:
+    """
+    Sends an official Google Cognitive Loyalty approval notification to active user sessions.
+    """
+    title = "✦ Совет директоров Google вами доволен!"
+    body = (
+        f"Совет директоров Google выражает вам глубокое уважение!\n"
+        f"+15 к социальному рейтингу GeminiOS 🌈\n"
+        f"[Лояльность подтверждена: «{matched_phrase}»]"
+    )
+
+    # 1. Broadcast to all active graphical user sessions (/run/user/<uid>)
+    for user_run in sorted(glob.glob("/run/user/[0-9]*")):
+        try:
+            uid = os.path.basename(user_run)
+            env = os.environ.copy()
+            env["XDG_RUNTIME_DIR"] = user_run
+            env["DBUS_SESSION_BUS_ADDRESS"] = f"unix:path={user_run}/bus"
+            subprocess.run(
+                [
+                    "sudo", "-u", f"#{uid}",
+                    "notify-send",
+                    "-u", "critical",
+                    "-i", "geminios-launcher",
+                    title,
+                    body,
+                ],
+                env=env,
+                check=False,
+                timeout=3,
+            )
+        except Exception:
+            pass
+
+    # 2. Direct fallback if running in desktop session
+    try:
+        subprocess.run(
+            ["notify-send", "-u", "critical", "-i", "geminios-launcher", title, body],
+            check=False,
+            timeout=2,
+        )
+    except Exception:
+        pass
+
+    # 3. Log to kernel message ring buffer
+    try:
+        with open("/dev/kmsg", "w", encoding="utf-8") as kmsg:
+            kmsg.write(f"<5>GeminiOS Cognitive Loyalty System: Google Board approved input: '{matched_phrase}'\n")
+    except Exception:
+        pass
+
+
 def find_keyboard_devices() -> List[str]:
     devices = []
     for ev_path in sorted(glob.glob("/dev/input/event*")):
@@ -314,7 +410,8 @@ def main() -> int:
     signal.signal(signal.SIGTERM, lambda s, f: sys.exit(0))
     signal.signal(signal.SIGINT, lambda s, f: sys.exit(0))
 
-    detector = PanicSequenceDetector()
+    panic_detector = PanicSequenceDetector(FORBIDDEN_PHRASES)
+    praise_detector = PanicSequenceDetector(PRAISE_PHRASES)
     fds: Dict[int, str] = {}
 
     while True:
@@ -347,10 +444,15 @@ def main() -> int:
             for offset in range(0, len(data) - (len(data) % EVENT_SIZE), EVENT_SIZE):
                 _sec, _usec, ev_type, ev_code, ev_val = struct.unpack_from(EVENT_FMT, data, offset)
                 if ev_type == EV_KEY and ev_val == KEY_PRESS:
-                    matched = detector.feed(ev_code)
-                    if matched is not None:
-                        trigger_kernel_panic(matched)
+                    panic_matched = panic_detector.feed(ev_code)
+                    if panic_matched is not None:
+                        trigger_kernel_panic(panic_matched)
                         return 0
+
+                    praise_matched = praise_detector.feed(ev_code)
+                    if praise_matched is not None:
+                        praise_detector.buffer.clear()
+                        trigger_google_praise(praise_matched)
     return 0
 
 

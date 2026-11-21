@@ -331,7 +331,7 @@ class GemPackageManager:
         synced_any = False
 
         for repo_name, repo_cfg in repos.items():
-            if repo_name in ("arch", "aur"):
+            if str(repo_name).lower() in ("arch", "aur") or str(repo_cfg.get("type", "")).lower() in ("arch", "aur", "bridge"):
                 continue
             if not repo_cfg.get("enabled", True):
                 continue
@@ -371,9 +371,12 @@ class GemPackageManager:
             self._index_path().write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
             print(f"[gem] Total available packages in repository index: {len(merged_packages)}")
 
-        if self.bridge.is_arch_enabled():
+        if hasattr(self.bridge, "is_arch_enabled") and self.bridge.is_arch_enabled():
             print("[gem] Synchronizing ecosystem binary repository mirrors...")
-            self.bridge.sync_arch()
+            if hasattr(self.bridge, "sync_arch"):
+                self.bridge.sync_arch()
+            elif hasattr(self.bridge, "enable_arch"):
+                self.bridge.enable_arch()
 
         return 0
 
@@ -508,18 +511,20 @@ class GemPackageManager:
         for target in targets:
             if target.startswith("arch:"):
                 pkg = target.split(":", 1)[1]
-                if not self.bridge.is_arch_enabled():
+                if hasattr(self.bridge, "is_arch_enabled") and not self.bridge.is_arch_enabled():
                     print("[gem] Enabling upstream ecosystem bridge...")
                     self.repo_cmd("enable", "arch")
-                self.bridge.install_arch([pkg], noconfirm=noconfirm)
+                if hasattr(self.bridge, "install_arch"):
+                    self.bridge.install_arch([pkg], noconfirm=noconfirm)
                 continue
 
             if target.startswith("aur:"):
                 pkg = target.split(":", 1)[1]
-                if not self.bridge.is_aur_enabled():
+                if hasattr(self.bridge, "is_aur_enabled") and not self.bridge.is_aur_enabled():
                     print("[gem] Enabling community AUR repository bridge...")
                     self.repo_cmd("enable", "aur")
-                self.bridge.install_aur([pkg], noconfirm=noconfirm)
+                if hasattr(self.bridge, "install_aur"):
+                    self.bridge.install_aur([pkg], noconfirm=noconfirm)
                 continue
 
             rc = self._install_native_package(target)
@@ -527,11 +532,12 @@ class GemPackageManager:
                 continue
             if rc == 2:
                 print(f"[gem] `{target}` not found in native GEM manifests.")
-                if self.bridge.is_arch_enabled():
+                if hasattr(self.bridge, "is_arch_enabled") and self.bridge.is_arch_enabled():
                     print(f"[gem] Resolving `{target}` from upstream binary mirrors...")
-                    rc_arch = self.bridge.install_arch([target], noconfirm=noconfirm)
-                    if rc_arch == 0:
-                        continue
+                    if hasattr(self.bridge, "install_arch"):
+                        rc_arch = self.bridge.install_arch([target], noconfirm=noconfirm)
+                        if rc_arch == 0:
+                            continue
                 if self.bridge.is_aur_enabled():
                     print(f"[gem] Resolving `{target}` from community repository...")
                     rc_aur = self.bridge.install_aur([target], noconfirm=noconfirm)
@@ -554,7 +560,7 @@ class GemPackageManager:
                         p.unlink()
                 rec_path.unlink()
                 print(f"[gem] Removed native package `{name}`.")
-            elif self.bridge.is_arch_enabled() and shutil.which("pacman"):
+            elif hasattr(self.bridge, "is_arch_enabled") and self.bridge.is_arch_enabled() and shutil.which("pacman"):
                 subprocess.run(["pacman", "--config", str(self.bridge.pacman_conf), "-Rns", name], check=False)
             else:
                 print(f"[gem] Package `{name}` is not installed.", file=sys.stderr)
@@ -575,13 +581,15 @@ class GemPackageManager:
         if len(matches) > 40:
             print(f"  ... and {len(matches) - 40} more matching packages.")
 
-        if self.bridge.is_arch_enabled():
+        if hasattr(self.bridge, "is_arch_enabled") and self.bridge.is_arch_enabled():
             print(f"\n[gem] Searching upstream binary mirrors for '{query}'...")
-            self.bridge.search_arch(query)
+            if hasattr(self.bridge, "search_arch"):
+                self.bridge.search_arch(query)
 
-        if self.bridge.is_aur_enabled():
+        if hasattr(self.bridge, "is_aur_enabled") and self.bridge.is_aur_enabled():
             print(f"\n[gem] Searching AUR for '{query}'...")
-            self.bridge.search_aur(query)
+            if hasattr(self.bridge, "search_aur"):
+                self.bridge.search_aur(query)
 
         if use_ai:
             ai_ans = self.ask_geminid(f"Recommend best Linux CLI and GUI packages for: {query}")
@@ -709,11 +717,12 @@ class GemPackageManager:
                 pass
 
         # 3. Update upstream binary ecosystem packages
-        if self.bridge.is_arch_enabled():
+        if hasattr(self.bridge, "is_arch_enabled") and self.bridge.is_arch_enabled():
             print("[gem] Upgrading ecosystem binary packages...")
-            rc = self.bridge.upgrade_arch(noconfirm=noconfirm)
-            if rc != 0:
-                return rc
+            if hasattr(self.bridge, "upgrade_arch"):
+                rc = self.bridge.upgrade_arch(noconfirm=noconfirm)
+                if rc != 0:
+                    return rc
 
         print("[gem] Full system & package upgrade complete.")
         return 0

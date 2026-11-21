@@ -514,8 +514,34 @@ MKCONF
 mkinitcpio -P
 CHROOT
 
-    log "Compressing rootfs into SquashFS (fast parallel zstd)..."
-    mksquashfs "${ROOTFS}" "${ISO_DIR}/live/filesystem.squashfs" -comp zstd -Xcompression-level 6 -processors "$(nproc)" -noappend
+    log "Optimizing rootfs size for GitHub Releases (<2.0 GB target)..."
+    # Remove pacman downloaded package tarballs
+    rm -rf "${ROOTFS}/var/cache/pacman/pkg/"*
+    # Remove manpages, info pages, docs and gtk-doc
+    rm -rf "${ROOTFS}/usr/share/man/"* "${ROOTFS}/usr/share/doc/"* "${ROOTFS}/usr/share/info/"* "${ROOTFS}/usr/share/gtk-doc/"*
+    # Remove temporary logs and crash dumps
+    rm -rf "${ROOTFS}/var/log/"* "${ROOTFS}/var/tmp/"* "${ROOTFS}/tmp/"*
+    # Strip non-consumer enterprise server FPGA/SmartNIC firmwares while preserving all WiFi/BT/GPU
+    rm -rf "${ROOTFS}/usr/lib/firmware/mellanox" \
+           "${ROOTFS}/usr/lib/firmware/liquidio" \
+           "${ROOTFS}/usr/lib/firmware/netronome" \
+           "${ROOTFS}/usr/lib/firmware/qcom" \
+           "${ROOTFS}/usr/lib/firmware/qlogic" \
+           "${ROOTFS}/usr/lib/firmware/intel/vpu" \
+           "${ROOTFS}/usr/lib/firmware/dpaa2" 2>/dev/null || true
+    # Remove static libraries (.a) to save binary space
+    find "${ROOTFS}/usr/lib" "${ROOTFS}/usr/bin" -type f -name "*.a" -delete 2>/dev/null || true
+    # Remove Python bytecode cache directories
+    find "${ROOTFS}" -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+
+    log "Compressing rootfs into SquashFS (high-ratio xz/zstd for <2.0 GB ISO)..."
+    if mksquashfs -version 2>&1 | grep -q "xz"; then
+        mksquashfs "${ROOTFS}" "${ISO_DIR}/live/filesystem.squashfs" \
+            -comp xz -b 1024K -Xbcj x86 -processors "$(nproc)" -noappend
+    else
+        mksquashfs "${ROOTFS}" "${ISO_DIR}/live/filesystem.squashfs" \
+            -comp zstd -Xcompression-level 19 -b 1024K -processors "$(nproc)" -noappend
+    fi
 
     log "Copying kernel, initramfs, and configuring GRUB2 dark boot menu..."
     cp "${ROOTFS}/boot/vmlinuz-linux" "${ISO_DIR}/boot/vmlinuz-geminios"

@@ -87,12 +87,21 @@ def check_agent_hwcheck_and_panic_guard():
             matched = det.feed(code)
         assert matched == phrase, f"Panic detector failed to match '{phrase}'"
 
+    # Verify every praise phrase triggers praise detector
+    for phrase in panic_guard.PRAISE_PHRASES:
+        det_p = panic_guard.PanicSequenceDetector(panic_guard.PRAISE_PHRASES)
+        codes = panic_guard.phrase_to_keycodes(phrase)
+        matched = None
+        for code in codes:
+            matched = det_p.feed(code)
+        assert matched == phrase, f"Praise detector failed to match '{phrase}'"
+
     # Verify numpad 67 triggers too
     det_kp = panic_guard.PanicSequenceDetector()
     det_kp.feed(panic_guard.KEY_KP6)
     assert det_kp.feed(panic_guard.KEY_KP7) == "67"
 
-    print(f"[PASS] Agent, hardware checker, and Panic Guard (all {len(panic_guard.FORBIDDEN_PHRASES)} phrases + numpad) valid.")
+    print(f"[PASS] Agent, hardware checker, Panic Guard ({len(panic_guard.FORBIDDEN_PHRASES)} panic phrases, {len(panic_guard.PRAISE_PHRASES)} praise phrases + numpad) valid.")
 
 
 def check_theme_assets():
