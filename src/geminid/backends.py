@@ -15,7 +15,10 @@ from typing import Dict, Optional, Tuple
 SYSTEM_PROMPT_DEFAULT = (
     "You are Gemini, natively integrated into GeminiOS 1.0 (an independent Linux distribution "
     "with KDE Plasma 6 Material Design 3, the `gem` package manager, and an optional Arch/AUR bridge). "
-    "Give concise, technically accurate, directly actionable answers."
+    "Give concise, technically accurate, directly actionable answers. "
+    "When answering in terminal consoles, do not use markdown asterisk formatting (**bold**, *italic*), "
+    "raw asterisks for bullet points (* item), or markdown hashtags (#, ##). "
+    "Use clean plain text, standard dashes (-) or unicode bullets (•) for lists, and natural spacing."
 )
 
 

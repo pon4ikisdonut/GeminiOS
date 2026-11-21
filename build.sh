@@ -305,8 +305,24 @@ EOF
         "${ROOTFS}/etc/systemd/user.conf.d/10-geminios-shutdown.conf"
 
     # Full skeleton user config (/etc/skel) so Plasma 6 boots straight into M3 Dark with zero default KDE clutter
-    mkdir -p "${ROOTFS}/etc/skel/.config/gtk-3.0" "${ROOTFS}/etc/skel/.config/gtk-4.0" "${ROOTFS}/etc/skel/.local/share/konsole"
+    mkdir -p "${ROOTFS}/etc/skel/.config/gtk-3.0" "${ROOTFS}/etc/skel/.config/gtk-4.0" "${ROOTFS}/etc/skel/.local/share/konsole" "${ROOTFS}/etc/zsh"
     install -Dm644 "${ROOT_DIR}/src/integrations/shell/skel.zshrc" "${ROOTFS}/etc/skel/.zshrc"
+    install -Dm644 "${ROOT_DIR}/src/integrations/shell/skel.zshrc" "${ROOTFS}/etc/zsh/zshrc"
+
+    # Terminal arrow keys and history navigation defaults for readline (bash)
+    cat > "${ROOTFS}/etc/inputrc" <<'EOF'
+"\e[A": history-search-backward
+"\e[B": history-search-forward
+"\e[C": forward-char
+"\e[D": backward-char
+"\e[1;5C": forward-word
+"\e[1;5D": backward-word
+"\e[H": beginning-of-line
+"\e[F": end-of-line
+"\e[3~": delete-char
+set show-all-if-ambiguous on
+set completion-ignore-case on
+EOF
     install -Dm644 "${ROOT_DIR}/src/themes/plasma-m3/kwin/kwinrc" "${ROOTFS}/etc/skel/.config/kwinrc"
     install -Dm644 "${ROOT_DIR}/src/themes/plasma-m3/breezerc" "${ROOTFS}/etc/skel/.config/breezerc"
     install -Dm644 "${ROOT_DIR}/src/themes/plasma-m3/kglobalshortcutsrc" "${ROOTFS}/etc/skel/.config/kglobalshortcutsrc"

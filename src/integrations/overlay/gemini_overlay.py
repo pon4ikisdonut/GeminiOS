@@ -1,22 +1,28 @@
 #!/usr/bin/env python3
 """
-GeminiOS Global Spotlight & AI Assistant Overlay (`gemini-overlay`)
-Material Design 3 Dark floating assistant bound to Super+G in KDE Plasma 6.
+GeminiOS Spotlight & AI Assistant Application (`gemini-overlay` / `gemini-spotlight`)
+Full-fledged Material Design 3 Dark desktop AI application for GeminiOS.
 
 Features:
-- Persistent Multi-Session Chat History (~/.local/share/geminios/chats.json)
-- Sidebar with "+ New Chat", past sessions list, and delete actions
-- Material Design 3 Chat Bubbles (User in Google Blue, Gemini in Surface Container)
-- Mode Chips: [💬 Chat], [⚡ Agent Mode], [🔍 Deep Search]
-- Quick Action Chips: [✦ API Key], [✦ System Doctor], [✦ Explain Clipboard]
-- Code block formatting with Copy button
-- Instant single-instance toggle via QLocalServer (Super+G toggles show/hide)
+- Full desktop application window (KDE Plasma 6 / Wayland / X11 taskbar & Alt+Tab integration)
+- Never disappears or closes on window switch / focus loss
+- Instant global toggle via Super+G (QLocalServer single-instance)
+- Persistent multi-session chat history (~/.local/share/geminios/chats.json)
+- Search filter across past conversation history
+- Dynamic Material Design 3 Chat Bubbles with Markdown formatting and Copy button
+- Modes: [💬 Чат], [⚡ Agent Mode], [🔍 Поиск], [💻 Код]
+- Interactive Welcome Cards with instant prompt suggestions
+- Export chat transcript to Markdown / Text
+- Quick tools: System Doctor, Clipboard AI, Gemma Local, API Key, License Activation
+- Stop generation support (via Stop button or Escape)
 """
 
 import argparse
 import datetime
+import html
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -31,6 +37,7 @@ from PyQt6.QtGui import QColor, QFont, QIcon, QKeySequence, QShortcut
 from PyQt6.QtNetwork import QLocalServer, QLocalSocket
 from PyQt6.QtWidgets import (
     QApplication,
+    QFileDialog,
     QFrame,
     QHBoxLayout,
     QInputDialog,
@@ -49,24 +56,22 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-GEMINID_URL = "http://127.0.0.1:11435"
+GEMINID_URL = os.environ.get("GEMINID_URL", "http://127.0.0.1:11435")
 SOCKET_NAME = f"geminios-overlay-{os.getuid()}" if hasattr(os, "getuid") else "geminios-overlay-sock"
 STORAGE_DIR = Path.home() / ".local/share/geminios"
 CHATS_FILE = STORAGE_DIR / "chats.json"
 
 M3_STYLESHEET = """
 QWidget#RootWindow {
-    background-color: #10131A;
-    border: 1px solid #43474E;
-    border-radius: 24px;
+    background-color: #111318;
+    color: #E2E2E9;
+    font-family: 'Roboto', 'Noto Sans', sans-serif;
 }
 
 /* Sidebar */
 QFrame#Sidebar {
-    background-color: #14171F;
-    border-right: 1px solid #282C36;
-    border-top-left-radius: 24px;
-    border-bottom-left-radius: 24px;
+    background-color: #151820;
+    border-right: 1px solid #282C38;
 }
 
 QLabel#SidebarTitle {
@@ -84,14 +89,27 @@ QPushButton#NewChatBtn {
     background-color: #A8C7FA;
     color: #062E6F;
     border: none;
-    border-radius: 16px;
-    padding: 8px 16px;
+    border-radius: 14px;
+    padding: 9px 16px;
     font-size: 13px;
     font-weight: 700;
 }
 
 QPushButton#NewChatBtn:hover {
     background-color: #C2E7FF;
+}
+
+QLineEdit#SearchBox {
+    background-color: #1D212B;
+    color: #E2E2E9;
+    border: 1px solid #363C4C;
+    border-radius: 12px;
+    padding: 7px 12px;
+    font-size: 12px;
+}
+
+QLineEdit#SearchBox:focus {
+    border-color: #A8C7FA;
 }
 
 QListWidget#HistoryList {
@@ -102,43 +120,42 @@ QListWidget#HistoryList {
 }
 
 QListWidget#HistoryList::item {
-    border-radius: 12px;
+    border-radius: 10px;
     padding: 8px 10px;
     margin: 2px 0px;
 }
 
 QListWidget#HistoryList::item:hover {
-    background-color: #20242E;
+    background-color: #212632;
     color: #E2E2E9;
 }
 
 QListWidget#HistoryList::item:selected {
-    background-color: #2A3245;
+    background-color: #26334D;
     color: #A8C7FA;
     font-weight: 600;
 }
 
 QPushButton#SidebarChip {
-    background-color: #1C2029;
+    background-color: #1C202A;
     color: #C4C6D0;
-    border: 1px solid #333842;
-    border-radius: 12px;
-    padding: 5px 10px;
+    border: 1px solid #323846;
+    border-radius: 10px;
+    padding: 6px 10px;
     font-size: 11px;
     font-weight: 500;
+    text-align: left;
 }
 
 QPushButton#SidebarChip:hover {
-    background-color: #282E3B;
+    background-color: #272E3D;
     color: #A8C7FA;
     border-color: #A8C7FA;
 }
 
 /* Main Chat Area */
 QFrame#ChatArea {
-    background-color: #10131A;
-    border-top-right-radius: 24px;
-    border-bottom-right-radius: 24px;
+    background-color: #111318;
 }
 
 QLabel#ChatHeaderTitle {
@@ -149,27 +166,27 @@ QLabel#ChatHeaderTitle {
 
 QLabel#BackendBadge {
     color: #A8C7FA;
-    background-color: #1A2130;
-    border: 1px solid #384358;
+    background-color: #182234;
+    border: 1px solid #334460;
     border-radius: 10px;
-    padding: 3px 10px;
+    padding: 4px 12px;
     font-size: 11px;
-    font-weight: 500;
+    font-weight: 600;
 }
 
 /* Mode Switcher Chips */
 QPushButton#ModeChip {
-    background-color: #1C2029;
+    background-color: #1C202A;
     color: #C4C6D0;
-    border: 1px solid #333842;
-    border-radius: 14px;
+    border: 1px solid #323846;
+    border-radius: 13px;
     padding: 5px 14px;
     font-size: 12px;
     font-weight: 500;
 }
 
 QPushButton#ModeChip:hover {
-    background-color: #252B37;
+    background-color: #262D3C;
     color: #E2E2E9;
 }
 
@@ -178,6 +195,20 @@ QPushButton#ModeChip:checked {
     color: #062E6F;
     border: none;
     font-weight: 700;
+}
+
+QPushButton#HeaderActionBtn {
+    background-color: #1D212B;
+    color: #C4C6D0;
+    border: 1px solid #363C4C;
+    border-radius: 10px;
+    padding: 5px 10px;
+    font-size: 12px;
+}
+
+QPushButton#HeaderActionBtn:hover {
+    background-color: #282F3E;
+    color: #A8C7FA;
 }
 
 /* Scroll Area */
@@ -192,10 +223,14 @@ QWidget#MessageContainer {
 
 /* Chat Input Bar */
 QFrame#InputContainer {
-    background-color: #1A1D25;
-    border: 1px solid #383D48;
-    border-radius: 22px;
-    padding: 4px;
+    background-color: #191D26;
+    border: 1px solid #373D4D;
+    border-radius: 18px;
+    padding: 4px 8px;
+}
+
+QFrame#InputContainer:focus-within {
+    border-color: #A8C7FA;
 }
 
 QTextEdit#InputEdit {
@@ -203,14 +238,14 @@ QTextEdit#InputEdit {
     color: #E2E2E9;
     border: none;
     font-size: 13px;
-    padding: 6px 12px;
+    padding: 6px 8px;
 }
 
 QPushButton#SendBtn {
     background-color: #A8C7FA;
     color: #062E6F;
     border: none;
-    border-radius: 18px;
+    border-radius: 16px;
     width: 36px;
     height: 36px;
     font-size: 15px;
@@ -222,8 +257,39 @@ QPushButton#SendBtn:hover {
 }
 
 QPushButton#SendBtn:disabled {
-    background-color: #2A2F3A;
-    color: #6A707E;
+    background-color: #262B36;
+    color: #616776;
+}
+
+QPushButton#StopBtn {
+    background-color: #93000A;
+    color: #FFDAD6;
+    border: none;
+    border-radius: 16px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+QPushButton#StopBtn:hover {
+    background-color: #BA1A1A;
+}
+
+/* Suggestion Card */
+QPushButton#SuggestCard {
+    background-color: #191D26;
+    color: #C4C6D0;
+    border: 1px solid #303644;
+    border-radius: 14px;
+    padding: 12px 16px;
+    font-size: 12px;
+    text-align: left;
+}
+
+QPushButton#SuggestCard:hover {
+    background-color: #242B39;
+    color: #E2E2E9;
+    border-color: #A8C7FA;
 }
 
 /* Action icons */
@@ -231,7 +297,7 @@ QPushButton#TrashBtn {
     background: transparent;
     color: #8E9099;
     border: none;
-    font-size: 12px;
+    font-size: 11px;
     padding: 4px;
 }
 
@@ -274,7 +340,7 @@ class GeminiWorker(QThread):
 
 
 class MessageBubble(QFrame):
-    """Material 3 Chat Message Bubble (User in Blue, Gemini in Surface Container)."""
+    """Material Design 3 Message Bubble with Markdown formatting and Copy button."""
 
     def __init__(self, role: str, text: str, timestamp: str = "", backend: str = ""):
         super().__init__()
@@ -285,7 +351,7 @@ class MessageBubble(QFrame):
         bubble = QFrame()
         bubble_layout = QVBoxLayout(bubble)
         bubble_layout.setContentsMargins(14, 10, 14, 10)
-        bubble_layout.setSpacing(4)
+        bubble_layout.setSpacing(6)
 
         if role == "user":
             bubble.setStyleSheet("""
@@ -300,7 +366,7 @@ class MessageBubble(QFrame):
             bubble_layout.addWidget(meta)
 
             content = QLabel(text)
-            content.setStyleSheet("color: #FFFFFF; font-size: 13px;")
+            content.setStyleSheet("color: #FFFFFF; font-size: 13px; line-height: 1.4;")
             content.setWordWrap(True)
             content.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
             bubble_layout.addWidget(content)
@@ -312,8 +378,8 @@ class MessageBubble(QFrame):
         else:
             bubble.setStyleSheet("""
                 QFrame {
-                    background-color: #1A1E26;
-                    border: 1px solid #313745;
+                    background-color: #191D26;
+                    border: 1px solid #303746;
                     border-radius: 18px;
                     border-top-left-radius: 4px;
                 }
@@ -324,22 +390,28 @@ class MessageBubble(QFrame):
             header_row.addWidget(badge)
             header_row.addStretch()
 
-            copy_btn = QPushButton("Copy")
+            copy_btn = QPushButton("Скопировать")
             copy_btn.setStyleSheet("""
                 QPushButton {
-                    background-color: #252A36;
+                    background-color: #242A38;
                     color: #C4C6D0;
-                    border: 1px solid #383F50;
+                    border: 1px solid #3A4356;
                     border-radius: 8px;
-                    padding: 2px 8px;
+                    padding: 3px 10px;
                     font-size: 10px;
+                    font-weight: 500;
                 }
                 QPushButton:hover {
-                    background-color: #323A4A;
+                    background-color: #313A4D;
                     color: #A8C7FA;
                 }
             """)
-            copy_btn.clicked.connect(lambda: QApplication.clipboard().setText(text))
+
+            def on_copy():
+                QApplication.clipboard().setText(text)
+                copy_btn.setText("Скопировано! ✓")
+
+            copy_btn.clicked.connect(on_copy)
             header_row.addWidget(copy_btn)
             bubble_layout.addLayout(header_row)
 
@@ -358,7 +430,7 @@ class MessageBubble(QFrame):
             content.setHtml(self._format_markdown_html(text))
             content.document().adjustSize()
             doc_h = int(content.document().size().height())
-            content.setFixedHeight(max(30, min(doc_h + 10, 480)))
+            content.setFixedHeight(max(32, doc_h + 16))
             bubble_layout.addWidget(content)
 
             row = QHBoxLayout()
@@ -367,7 +439,6 @@ class MessageBubble(QFrame):
             layout.addLayout(row)
 
     def _format_markdown_html(self, raw: str) -> str:
-        import html
         escaped = html.escape(raw)
         lines = []
         in_code = False
@@ -377,7 +448,7 @@ class MessageBubble(QFrame):
             if line.startswith("```"):
                 if in_code:
                     code_html = "\n".join(code_buf)
-                    lines.append(f"<pre style='background:#12151D; color:#A8C7FA; padding:8px; border-radius:8px; font-family:JetBrains Mono, monospace;'>{code_html}</pre>")
+                    lines.append(f"<pre style='background:#12151D; color:#A8C7FA; padding:10px; border-radius:8px; font-family:JetBrains Mono, monospace;'>{code_html}</pre>")
                     code_buf = []
                     in_code = False
                 else:
@@ -387,30 +458,50 @@ class MessageBubble(QFrame):
                 code_buf.append(line)
             else:
                 if line.startswith("# "):
-                    lines.append(f"<h2 style='color:#A8C7FA; margin:4px 0;'>{line[2:]}</h2>")
+                    lines.append(f"<h2 style='color:#A8C7FA; margin:6px 0;'>{line[2:]}</h2>")
                 elif line.startswith("## "):
-                    lines.append(f"<h3 style='color:#E2E2E9; margin:3px 0;'>{line[3:]}</h3>")
-                elif line.startswith("- "):
-                    lines.append(f"<li style='margin-left:12px;'>{line[2:]}</li>")
+                    lines.append(f"<h3 style='color:#E2E2E9; margin:4px 0;'>{line[3:]}</h3>")
+                elif line.startswith("### "):
+                    lines.append(f"<h4 style='color:#A8C7FA; margin:3px 0;'>{line[4:]}</h4>")
+                elif line.startswith("- ") or line.startswith("* "):
+                    content = line[2:]
+                    content = re.sub(r"\*\*(.+?)\*\*", r"<b style='color:#FFFFFF;'>\1</b>", content)
+                    content = re.sub(r"`([^`]+?)`", r"<code style='background:#12151D; color:#A8C7FA; padding:2px 4px; border-radius:4px; font-family:JetBrains Mono, monospace;'>\1</code>", content)
+                    lines.append(f"<div style='margin-left:14px; margin-top:2px;'>• {content}</div>")
                 else:
-                    lines.append(f"<p style='margin:3px 0;'>{line}</p>")
+                    content = re.sub(r"\*\*(.+?)\*\*", r"<b style='color:#FFFFFF;'>\1</b>", line)
+                    content = re.sub(r"(?<!\*)\*([^\*\n]+?)\*(?!\*)", r"<i>\1</i>", content)
+                    content = re.sub(r"`([^`]+?)`", r"<code style='background:#12151D; color:#A8C7FA; padding:2px 4px; border-radius:4px; font-family:JetBrains Mono, monospace;'>\1</code>", content)
+                    lines.append(f"<p style='margin:4px 0;'>{content}</p>")
 
         if in_code and code_buf:
             code_html = "\n".join(code_buf)
-            lines.append(f"<pre style='background:#12151D; color:#A8C7FA; padding:8px; border-radius:8px; font-family:JetBrains Mono, monospace;'>{code_html}</pre>")
+            lines.append(f"<pre style='background:#12151D; color:#A8C7FA; padding:10px; border-radius:8px; font-family:JetBrains Mono, monospace;'>{code_html}</pre>")
 
         return "".join(lines)
 
 
 class GeminiSpotlightWindow(QWidget):
-    """Full-featured Material Design 3 Spotlight Chat with Persistent History."""
+    """Full-featured Material Design 3 Desktop Application with Persistent History."""
 
     def __init__(self, initial_prompt: str = ""):
         super().__init__()
         self.setObjectName("RootWindow")
-        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool)
-        self.resize(960, 620)
+        # Standard top-level application window: shows in taskbar, Alt+Tab, and remains open on focus switch
+        self.setWindowFlags(Qt.WindowType.Window)
+        self.setWindowTitle("Gemini Spotlight")
+        self.resize(1020, 680)
+        self.setMinimumSize(780, 520)
         self.setStyleSheet(M3_STYLESHEET)
+
+        # Set application icon
+        icon_path = Path("/usr/share/icons/hicolor/scalable/apps/gemini-spotlight.svg")
+        if not icon_path.exists():
+            local_svg = Path(__file__).resolve().parent.parent / "themes/plasma-m3/icons/gemini-spotlight.svg"
+            if local_svg.exists():
+                icon_path = local_svg
+        if icon_path.exists():
+            self.setWindowIcon(QIcon(str(icon_path)))
 
         self.sessions: List[Dict] = []
         self.current_session_id: Optional[str] = None
@@ -421,14 +512,33 @@ class GeminiSpotlightWindow(QWidget):
         self._load_history()
         self.refresh_status()
 
-        # Keyboard shortcuts
-        QShortcut(QKeySequence("Escape"), self, self.hide)
+        # Keyboard shortcuts (Esc stops current generation or clears input, never kills app)
+        QShortcut(QKeySequence("Escape"), self, self.on_escape)
         QShortcut(QKeySequence("Ctrl+N"), self, self.on_new_chat)
-        QShortcut(QKeySequence("Ctrl+Q"), self, self.close)
+        QShortcut(QKeySequence("Ctrl+Q"), self, self.full_quit)
+        QShortcut(QKeySequence("Ctrl+W"), self, self.hide)
+        QShortcut(QKeySequence("Ctrl+S"), self, self.on_export_chat)
 
         if initial_prompt:
             self.input_edit.setPlainText(initial_prompt)
             self.on_send()
+
+    def closeEvent(self, event):
+        # Hiding keeps daemon single-instance listener alive for instant Super+G toggle
+        self.hide()
+        event.ignore()
+
+    def full_quit(self):
+        QApplication.quit()
+
+    def on_escape(self):
+        if self.worker and self.worker.isRunning():
+            self.worker.terminate()
+            self.backend_badge.setText("● Остановлено")
+            self.send_btn.setEnabled(True)
+            self.stop_btn.setVisible(False)
+        elif self.input_edit.toPlainText().strip():
+            self.input_edit.clear()
 
     def _init_ui(self):
         root_layout = QHBoxLayout(self)
@@ -441,19 +551,19 @@ class GeminiSpotlightWindow(QWidget):
         # 1. Left Sidebar
         sidebar = QFrame()
         sidebar.setObjectName("Sidebar")
-        sidebar.setFixedWidth(270)
+        sidebar.setFixedWidth(280)
         side_layout = QVBoxLayout(sidebar)
-        side_layout.setContentsMargins(16, 20, 16, 16)
-        side_layout.setSpacing(12)
+        side_layout.setContentsMargins(16, 16, 16, 14)
+        side_layout.setSpacing(10)
 
         title_box = QHBoxLayout()
         logo_lbl = QLabel("✦")
-        logo_lbl.setStyleSheet("color:#A8C7FA; font-size:20px; font-weight:bold;")
+        logo_lbl.setStyleSheet("color:#A8C7FA; font-size:22px; font-weight:bold;")
         brand_col = QVBoxLayout()
         brand_col.setSpacing(1)
         b_name = QLabel("Gemini Spotlight")
         b_name.setObjectName("SidebarTitle")
-        b_tag = QLabel("Google Material 3 · GeminiOS")
+        b_tag = QLabel("GeminiOS 1.0 · Material Design 3")
         b_tag.setObjectName("SidebarSub")
         brand_col.addWidget(b_name)
         brand_col.addWidget(b_tag)
@@ -462,12 +572,19 @@ class GeminiSpotlightWindow(QWidget):
         title_box.addStretch()
         side_layout.addLayout(title_box)
 
-        new_btn = QPushButton("+ New Chat")
+        new_btn = QPushButton("+ Новый диалог")
         new_btn.setObjectName("NewChatBtn")
+        new_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         new_btn.clicked.connect(self.on_new_chat)
         side_layout.addWidget(new_btn)
 
-        hist_lbl = QLabel("Recent Conversations")
+        self.search_box = QLineEdit()
+        self.search_box.setObjectName("SearchBox")
+        self.search_box.setPlaceholderText("Поиск по диалогам...")
+        self.search_box.textChanged.connect(self._on_search_history)
+        side_layout.addWidget(self.search_box)
+
+        hist_lbl = QLabel("История диалогов")
         hist_lbl.setStyleSheet("color:#8E9099; font-size:11px; font-weight:600; text-transform:uppercase;")
         side_layout.addWidget(hist_lbl)
 
@@ -480,20 +597,22 @@ class GeminiSpotlightWindow(QWidget):
         quick_grid = QVBoxLayout()
         quick_grid.setSpacing(6)
         for label, cb in [
-            ("✦ Activate GeminiOS", self.on_activate_system),
-            ("✦ Google Gemini API Key", self.on_set_api_key),
-            ("✦ System Doctor", self.on_run_doctor),
-            ("✦ Analyze Clipboard", self.on_analyze_clipboard),
-            ("✦ Local Gemma Engine", self.on_enable_gemma),
+            ("✦ Активация GeminiOS", self.on_activate_system),
+            ("✦ Ключ Google Gemini API", self.on_set_api_key),
+            ("✦ Системный доктор", self.on_run_doctor),
+            ("✦ Анализ буфера обмена", self.on_analyze_clipboard),
+            ("✦ Локальный движок Gemma", self.on_enable_gemma),
         ]:
             b = QPushButton(label)
             b.setObjectName("SidebarChip")
+            b.setCursor(Qt.CursorShape.PointingHandCursor)
             b.clicked.connect(cb)
             quick_grid.addWidget(b)
         side_layout.addLayout(quick_grid)
 
-        del_all_btn = QPushButton("🗑 Clear All History")
+        del_all_btn = QPushButton("🗑 Очистить всю историю")
         del_all_btn.setObjectName("TrashBtn")
+        del_all_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         del_all_btn.clicked.connect(self.on_clear_all_history)
         side_layout.addWidget(del_all_btn)
 
@@ -503,12 +622,12 @@ class GeminiSpotlightWindow(QWidget):
         chat_area = QFrame()
         chat_area.setObjectName("ChatArea")
         chat_layout = QVBoxLayout(chat_area)
-        chat_layout.setContentsMargins(20, 20, 20, 16)
+        chat_layout.setContentsMargins(20, 16, 20, 16)
         chat_layout.setSpacing(10)
 
         # Top Bar
         top_bar = QHBoxLayout()
-        self.mode_chat = QPushButton("💬 Chat")
+        self.mode_chat = QPushButton("💬 Чат")
         self.mode_chat.setObjectName("ModeChip")
         self.mode_chat.setCheckable(True)
         self.mode_chat.setChecked(True)
@@ -519,24 +638,39 @@ class GeminiSpotlightWindow(QWidget):
         self.mode_agent.setCheckable(True)
         self.mode_agent.clicked.connect(lambda: self._set_mode("agent"))
 
-        self.mode_search = QPushButton("🔍 Deep Search")
+        self.mode_search = QPushButton("🔍 Поиск")
         self.mode_search.setObjectName("ModeChip")
         self.mode_search.setCheckable(True)
         self.mode_search.clicked.connect(lambda: self._set_mode("search"))
 
+        self.mode_code = QPushButton("💻 Код")
+        self.mode_code.setObjectName("ModeChip")
+        self.mode_code.setCheckable(True)
+        self.mode_code.clicked.connect(lambda: self._set_mode("code"))
+
         top_bar.addWidget(self.mode_chat)
         top_bar.addWidget(self.mode_agent)
         top_bar.addWidget(self.mode_search)
+        top_bar.addWidget(self.mode_code)
         top_bar.addStretch()
 
-        self.backend_badge = QLabel("Checking backend...")
+        self.backend_badge = QLabel("Проверка бэкенда...")
         self.backend_badge.setObjectName("BackendBadge")
         top_bar.addWidget(self.backend_badge)
 
-        close_btn = QPushButton("✕")
-        close_btn.setStyleSheet("background:transparent; color:#8E9099; border:none; font-size:14px; padding:4px;")
-        close_btn.clicked.connect(self.hide)
-        top_bar.addWidget(close_btn)
+        export_btn = QPushButton("💾 Экспорт")
+        export_btn.setObjectName("HeaderActionBtn")
+        export_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        export_btn.setToolTip("Экспортировать текущий диалог в файл Markdown")
+        export_btn.clicked.connect(self.on_export_chat)
+        top_bar.addWidget(export_btn)
+
+        clear_chat_btn = QPushButton("🗑 Очистить")
+        clear_chat_btn.setObjectName("HeaderActionBtn")
+        clear_chat_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        clear_chat_btn.setToolTip("Очистить сообщения в текущем диалоге")
+        clear_chat_btn.clicked.connect(self.on_clear_current_chat)
+        top_bar.addWidget(clear_chat_btn)
 
         chat_layout.addLayout(top_bar)
 
@@ -557,18 +691,25 @@ class GeminiSpotlightWindow(QWidget):
         input_container = QFrame()
         input_container.setObjectName("InputContainer")
         input_box = QHBoxLayout(input_container)
-        input_box.setContentsMargins(6, 4, 6, 4)
+        input_box.setContentsMargins(8, 4, 8, 4)
         input_box.setSpacing(8)
 
         self.input_edit = QTextEdit()
         self.input_edit.setObjectName("InputEdit")
-        self.input_edit.setPlaceholderText("Ask Gemini anything or describe a system task... (Enter to send, Shift+Enter for newline)")
+        self.input_edit.setPlaceholderText("Спросите Gemini о чем угодно или опишите задачу... (Enter — отправить, Shift+Enter — новая строка)")
         self.input_edit.setFixedHeight(48)
         self.input_edit.installEventFilter(self)
         input_box.addWidget(self.input_edit, 1)
 
+        self.stop_btn = QPushButton("⏹ Стоп")
+        self.stop_btn.setObjectName("StopBtn")
+        self.stop_btn.setVisible(False)
+        self.stop_btn.clicked.connect(self.on_escape)
+        input_box.addWidget(self.stop_btn)
+
         self.send_btn = QPushButton("➤")
         self.send_btn.setObjectName("SendBtn")
+        self.send_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.send_btn.clicked.connect(self.on_send)
         input_box.addWidget(self.send_btn)
 
@@ -591,12 +732,15 @@ class GeminiSpotlightWindow(QWidget):
         self.mode_chat.setChecked(mode == "chat")
         self.mode_agent.setChecked(mode == "agent")
         self.mode_search.setChecked(mode == "search")
+        self.mode_code.setChecked(mode == "code")
         if mode == "agent":
-            self.input_edit.setPlaceholderText("Describe a system goal (e.g. 'install git and configure nginx')...")
+            self.input_edit.setPlaceholderText("Опишите системную цель (например: 'установи nginx и настрой автозапуск')...")
         elif mode == "search":
-            self.input_edit.setPlaceholderText("Search documentation, files, or packages...")
+            self.input_edit.setPlaceholderText("Поиск по репозиториям пакетов gem, файлам или документации...")
+        elif mode == "code":
+            self.input_edit.setPlaceholderText("Напишите задачу по коду (Bash, Python, C, Rust)...")
         else:
-            self.input_edit.setPlaceholderText("Ask Gemini anything... (Enter to send, Shift+Enter for newline)")
+            self.input_edit.setPlaceholderText("Спросите Gemini о чем угодно... (Enter — отправить, Shift+Enter — новая строка)")
 
     def _load_history(self):
         STORAGE_DIR.mkdir(parents=True, exist_ok=True)
@@ -607,7 +751,7 @@ class GeminiSpotlightWindow(QWidget):
             except Exception:
                 self.sessions = []
         if not self.sessions:
-            self._create_session("New Conversation")
+            self._create_session("Новый диалог")
         self._refresh_history_list()
 
     def _save_history(self):
@@ -615,11 +759,24 @@ class GeminiSpotlightWindow(QWidget):
         payload = {"chats": self.sessions}
         CHATS_FILE.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
 
-    def _refresh_history_list(self):
+    def _on_search_history(self, query: str):
+        query = query.strip().lower()
         self.history_list.blockSignals(True)
         self.history_list.clear()
         for s in self.sessions:
-            item = QListWidgetItem(f"💬 {s.get('title', 'Chat')}")
+            title = s.get("title", "Диалог")
+            if not query or query in title.lower():
+                item = QListWidgetItem(f"💬 {title}")
+                item.setData(Qt.ItemDataRole.UserRole, s.get("id"))
+                self.history_list.addItem(item)
+        self.history_list.blockSignals(False)
+
+    def _refresh_history_list(self):
+        self.search_box.clear()
+        self.history_list.blockSignals(True)
+        self.history_list.clear()
+        for s in self.sessions:
+            item = QListWidgetItem(f"💬 {s.get('title', 'Диалог')}")
             item.setData(Qt.ItemDataRole.UserRole, s.get("id"))
             self.history_list.addItem(item)
         self.history_list.blockSignals(False)
@@ -633,7 +790,7 @@ class GeminiSpotlightWindow(QWidget):
             self.history_list.setCurrentRow(idx)
             self._load_session_messages(self.sessions[idx])
 
-    def _create_session(self, title: str = "New Conversation") -> Dict:
+    def _create_session(self, title: str = "Новый диалог") -> Dict:
         sid = f"chat_{int(time.time())}_{len(self.sessions) + 1}"
         session = {
             "id": sid,
@@ -647,7 +804,7 @@ class GeminiSpotlightWindow(QWidget):
         return session
 
     def on_new_chat(self):
-        self._create_session("New Conversation")
+        self._create_session("Новый диалог")
         self._refresh_history_list()
         self.input_edit.clear()
         self.input_edit.setFocus()
@@ -659,7 +816,7 @@ class GeminiSpotlightWindow(QWidget):
             self._load_session_messages(session)
 
     def _load_session_messages(self, session: Dict):
-        # Clear existing message widgets (except top stretch)
+        # Clear existing message widgets (except bottom stretch)
         while self.msg_layout.count() > 1:
             child = self.msg_layout.takeAt(0)
             if child.widget():
@@ -667,10 +824,46 @@ class GeminiSpotlightWindow(QWidget):
 
         msgs = session.get("messages", [])
         if not msgs:
-            empty = QLabel("✦ Start chatting with Google Gemini or ask a system task.")
-            empty.setStyleSheet("color:#6A707E; font-size:13px; font-style:italic; padding:20px;")
-            empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.msg_layout.insertWidget(0, empty)
+            # Interactive Material Design 3 Welcome Cards
+            welcome_widget = QWidget()
+            w_layout = QVBoxLayout(welcome_widget)
+            w_layout.setContentsMargins(20, 30, 20, 20)
+            w_layout.setSpacing(16)
+
+            spark_icon = QLabel("✦")
+            spark_icon.setStyleSheet("color:#A8C7FA; font-size:42px; font-weight:bold;")
+            spark_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            w_layout.addWidget(spark_icon)
+
+            welcome_title = QLabel("Чем я могу помочь в GeminiOS?")
+            welcome_title.setStyleSheet("color:#E2E2E9; font-size:18px; font-weight:600;")
+            welcome_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            w_layout.addWidget(welcome_title)
+
+            welcome_sub = QLabel("Задавайте вопросы, выполняйте системные команды или используйте быстрые подсказки:")
+            welcome_sub.setStyleSheet("color:#8E9099; font-size:12px;")
+            welcome_sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            w_layout.addWidget(welcome_sub)
+
+            cards_box = QVBoxLayout()
+            cards_box.setSpacing(8)
+
+            suggestions = [
+                ("🔍 Как обновлять систему и пакеты через менеджер `gem`?", "Как обновлять систему и пакеты через менеджер gem?"),
+                ("⚡ Напиши bash-скрипт для резервного копирования домашней папки", "Напиши надежный bash-скрипт для резервного копирования домашней папки с ротацией архивов."),
+                ("🛠 Проверь сетевые сервисы и статус дисков на сервере", "Проверь сетевые сервисы и статус дисков в GeminiOS, покажи полезные диагностические команды."),
+                ("💻 Объясни разницу между Wayland и X11 в KDE Plasma 6", "Объясни ключевые различия между сессией Wayland и X11 в среде KDE Plasma 6."),
+            ]
+
+            for label, prompt in suggestions:
+                btn = QPushButton(label)
+                btn.setObjectName("SuggestCard")
+                btn.setCursor(Qt.CursorShape.PointingHandCursor)
+                btn.clicked.connect(lambda _, p=prompt: self._trigger_suggestion(p))
+                cards_box.addWidget(btn)
+
+            w_layout.addLayout(cards_box)
+            self.msg_layout.insertWidget(0, welcome_widget)
         else:
             for m in msgs:
                 bubble = MessageBubble(
@@ -682,6 +875,10 @@ class GeminiSpotlightWindow(QWidget):
                 self.msg_layout.insertWidget(self.msg_layout.count() - 1, bubble)
 
         self._scroll_to_bottom()
+
+    def _trigger_suggestion(self, prompt: str):
+        self.input_edit.setPlainText(prompt)
+        self.on_send()
 
     def _scroll_to_bottom(self):
         QApplication.processEvents()
@@ -699,12 +896,19 @@ class GeminiSpotlightWindow(QWidget):
                 current_sess = s
                 break
         if not current_sess:
-            current_sess = self._create_session("New Conversation")
+            current_sess = self._create_session("Новый диалог")
 
-        if current_sess.get("title") in ("New Conversation", ""):
+        if current_sess.get("title") in ("Новый диалог", "New Conversation", ""):
             first_words = " ".join(text.split()[:5])
-            current_sess["title"] = first_words[:30]
+            current_sess["title"] = first_words[:32]
             self._refresh_history_list()
+
+        # If welcome screen was shown, clear it
+        if not current_sess.get("messages"):
+            while self.msg_layout.count() > 1:
+                child = self.msg_layout.takeAt(0)
+                if child.widget():
+                    child.widget().deleteLater()
 
         current_sess["messages"].append({"role": "user", "content": text, "time": now_str})
         self._save_history()
@@ -714,6 +918,7 @@ class GeminiSpotlightWindow(QWidget):
         self.input_edit.clear()
         self._scroll_to_bottom()
 
+        # Built-in activation trigger
         if text.lower().strip() in ("activate", "активировать", "активация", "активируй", "активируй систему"):
             token = f"GEMINIOS-PRO-{int(time.time())}"
             user_act = Path.home() / ".config/geminios-activated"
@@ -733,7 +938,8 @@ class GeminiSpotlightWindow(QWidget):
             return
 
         self.send_btn.setEnabled(False)
-        self.backend_badge.setText("Thinking...")
+        self.stop_btn.setVisible(True)
+        self.backend_badge.setText("✦ Gemini думает...")
 
         self.worker = GeminiWorker(text, self.active_mode)
         self.worker.finished.connect(self._on_ai_response)
@@ -741,16 +947,17 @@ class GeminiSpotlightWindow(QWidget):
 
     def _on_ai_response(self, data: dict):
         self.send_btn.setEnabled(True)
+        self.stop_btn.setVisible(False)
         self.refresh_status()
         now_str = datetime.datetime.now().strftime("%H:%M")
 
         if not data.get("ok"):
-            err_msg = data.get("response", "Unknown error contacting Gemini AI.")
-            ans = f"**Error**: {err_msg}\n\n*Tip: Click '✦ Google Gemini API Key' on the sidebar to configure your key.*"
+            err_msg = data.get("response", "Не удалось связаться с Gemini AI.")
+            ans = f"**Ошибка**: {err_msg}\n\n*Совет: Нажмите «✦ Ключ Google Gemini API» на панели слева для настройки ключа.*"
             backend = "Error"
         elif "plan" in data:
             plan = data["plan"]
-            lines = [f"**Agent Plan**: {plan.get('summary', '')}\n"]
+            lines = [f"**План действий Агента**: {plan.get('summary', '')}\n"]
             for idx, step in enumerate(plan.get("steps", []), 1):
                 risk = step.get("risk", "safe").upper()
                 lines.append(f"{idx}. `[{risk}]` `${step['cmd']}`")
@@ -765,8 +972,8 @@ class GeminiSpotlightWindow(QWidget):
                     continue
                 reply = QMessageBox.question(
                     self,
-                    "GeminiOS Agent Confirmation",
-                    f"Execute planned command?\n\n{step['cmd']}\n\nReason: {step.get('reason', '')}",
+                    "Подтверждение действия Gemini Agent",
+                    f"Выполнить запланированную команду?\n\n{step['cmd']}\n\nПричина: {step.get('reason', '')}",
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 )
                 if reply == QMessageBox.StandardButton.Yes:
@@ -779,9 +986,9 @@ class GeminiSpotlightWindow(QWidget):
                     try:
                         with urllib.request.urlopen(req, timeout=120) as resp:
                             res = json.loads(resp.read().decode("utf-8"))
-                        ans += f"\n\n**Output of `{step['cmd']}`**:\n```\n{res.get('stdout', '')}{res.get('stderr', '')}\n```"
+                        ans += f"\n\n**Результат `{step['cmd']}`**:\n```\n{res.get('stdout', '')}{res.get('stderr', '')}\n```"
                     except Exception as exc:
-                        ans += f"\n\n**Execution failed**: {exc}"
+                        ans += f"\n\n**Ошибка выполнения**: {exc}"
         else:
             ans = data.get("response", "")
             backend = data.get("backend", "Gemini")
@@ -801,19 +1008,19 @@ class GeminiSpotlightWindow(QWidget):
             with urllib.request.urlopen(f"{GEMINID_URL}/v1/status", timeout=2) as resp:
                 st = json.loads(resp.read().decode("utf-8"))
             if st.get("cloud_configured"):
-                self.backend_badge.setText(f"● Gemini Cloud ({st.get('cloud_model')})")
+                self.backend_badge.setText(f"🟢 Gemini Cloud ({st.get('cloud_model', '2.5 Flash')})")
             elif st.get("fallback_enabled"):
-                self.backend_badge.setText(f"● Gemma Local ({st.get('fallback_model')})")
+                self.backend_badge.setText(f"🟢 Gemma Local ({st.get('fallback_model', '2B')})")
             else:
-                self.backend_badge.setText("● Setup Required (API Key)")
+                self.backend_badge.setText("🟡 Требуется API Key")
         except Exception:
-            self.backend_badge.setText("● geminid offline")
+            self.backend_badge.setText("⚪ geminid offline")
 
     def on_set_api_key(self):
         key, ok = QInputDialog.getText(
             self,
             "Google Gemini API Key",
-            "Enter your Google Gemini API key (AIza...):",
+            "Введите ваш ключ Google Gemini API (AIza...):",
             QLineEdit.EchoMode.Password,
         )
         if ok and key.strip():
@@ -826,9 +1033,9 @@ class GeminiSpotlightWindow(QWidget):
             try:
                 urllib.request.urlopen(req, timeout=5)
                 self.refresh_status()
-                QMessageBox.information(self, "API Key Saved", "Gemini API key configured successfully!")
+                QMessageBox.information(self, "Ключ сохранен", "Google Gemini API ключ успешно сохранен и активирован!")
             except Exception as exc:
-                QMessageBox.warning(self, "Error", f"Failed to save API key: {exc}")
+                QMessageBox.warning(self, "Ошибка", f"Не удалось сохранить ключ: {exc}")
 
     def on_run_doctor(self):
         subprocess.Popen(["konsole", "--hold", "-e", "gemini-doctor"])
@@ -836,26 +1043,61 @@ class GeminiSpotlightWindow(QWidget):
     def on_analyze_clipboard(self):
         clip = QApplication.clipboard().text().strip()
         if not clip:
-            QMessageBox.information(self, "Clipboard", "Clipboard is currently empty.")
+            QMessageBox.information(self, "Буфер обмена", "Буфер обмена в данный момент пуст.")
             return
-        self.input_edit.setPlainText(f"Explain or fix this clipboard content concisely:\n{clip[:4000]}")
+        self.input_edit.setPlainText(f"Объясни или исправь содержимое буфера обмена:\n{clip[:4000]}")
         self.on_send()
 
     def on_enable_gemma(self):
         subprocess.Popen(["konsole", "--hold", "-e", "gemini", "enable-gemma"])
 
+    def on_export_chat(self):
+        current_sess = None
+        for s in self.sessions:
+            if s.get("id") == self.current_session_id:
+                current_sess = s
+                break
+        if not current_sess or not current_sess.get("messages"):
+            QMessageBox.information(self, "Экспорт", "В текущем диалоге пока нет сообщений для экспорта.")
+            return
+
+        filename, _ = QFileDialog.getSaveFileName(
+            self,
+            "Экспортировать диалог",
+            str(Path.home() / f"{current_sess.get('title', 'chat')[:20]}.md"),
+            "Markdown (*.md);;Text (*.txt)",
+        )
+        if filename:
+            content = [f"# {current_sess.get('title', 'Диалог с Gemini')}\n\n"]
+            for m in current_sess.get("messages", []):
+                role = "Пользователь" if m.get("role") == "user" else "Gemini"
+                content.append(f"### {role} ({m.get('time', '')})\n{m.get('content', '')}\n\n")
+            Path(filename).write_text("".join(content), encoding="utf-8")
+            QMessageBox.information(self, "Экспорт завершен", f"Диалог успешно сохранен в:\n{filename}")
+
+    def on_clear_current_chat(self):
+        current_sess = None
+        for s in self.sessions:
+            if s.get("id") == self.current_session_id:
+                current_sess = s
+                break
+        if current_sess:
+            current_sess["messages"] = []
+            self._save_history()
+            self._load_session_messages(current_sess)
+
     def on_clear_all_history(self):
         reply = QMessageBox.question(
             self,
-            "Clear History",
-            "Are you sure you want to delete all chat history?",
+            "Очистить историю",
+            "Вы уверены, что хотите удалить всю историю диалогов?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:
             self.sessions = []
             if CHATS_FILE.exists():
                 CHATS_FILE.unlink(missing_ok=True)
-            self._create_session("New Conversation")
+            self._create_session("Новый диалог")
             self._refresh_history_list()
 
     def on_activate_system(self):
@@ -882,28 +1124,30 @@ class GeminiSpotlightWindow(QWidget):
             )
 
     def toggle_window(self):
-        if self.isVisible() and self.isActiveWindow():
+        if self.isVisible() and not self.isMinimized() and self.isActiveWindow():
             self.hide()
         else:
             self.show()
+            self.setWindowState(self.windowState() & ~Qt.WindowState.WindowMinimized | Qt.WindowState.WindowActive)
             self.raise_()
             self.activateWindow()
             self.input_edit.setFocus()
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="GeminiOS Spotlight Overlay")
+    parser = argparse.ArgumentParser(description="Gemini Spotlight Application")
     parser.add_argument("--prompt", default="", help="Initial prompt to ask immediately")
     parser.add_argument("--toggle", action="store_true", help="Toggle existing window")
     args, qt_args = parser.parse_known_args()
 
     app = QApplication([sys.argv[0]] + qt_args)
+    app.setApplicationName("Gemini Spotlight")
+    app.setDesktopFileName("geminios-overlay.desktop")
 
     # Single-instance handling via QLocalSocket
     test_socket = QLocalSocket()
     test_socket.connectToServer(SOCKET_NAME)
     if test_socket.waitForConnected(300):
-        # Already running: signal existing instance to toggle or accept prompt
         msg = json.dumps({"action": "toggle", "prompt": args.prompt})
         test_socket.write(msg.encode("utf-8"))
         test_socket.flush()
@@ -911,7 +1155,7 @@ def main() -> int:
         test_socket.disconnectFromServer()
         return 0
 
-    # Start primary instance
+    # Start primary application instance
     win = GeminiSpotlightWindow(initial_prompt=args.prompt)
 
     server = QLocalServer()
@@ -935,7 +1179,7 @@ def main() -> int:
     screen = app.primaryScreen().availableGeometry()
     win.move(
         screen.center().x() - win.width() // 2,
-        screen.top() + int(screen.height() * 0.12),
+        screen.top() + int(screen.height() * 0.10),
     )
     win.show()
     win.input_edit.setFocus()

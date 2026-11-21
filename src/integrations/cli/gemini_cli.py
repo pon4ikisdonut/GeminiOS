@@ -8,6 +8,7 @@ cloud/local backend selection, API key configuration, and Gemma setup.
 import argparse
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -38,6 +39,67 @@ def api_request(path: str, payload: dict = None) -> dict:
             return {"ok": False, "response": f"HTTP {exc.code}: {raw}"}
     except Exception as exc:
         return {"ok": False, "response": f"Cannot connect to geminid at {GEMINID_URL}: {exc}"}
+
+
+def format_terminal_output(text: str) -> str:
+    """
+    Cleans markdown formatting for the terminal console:
+    - Removes all bold/italic markdown asterisks (**word**, *word*)
+    - Converts markdown bullet lists (* item, - item) to clean bullets (• item)
+    - Formats headers cleanly without hashes (# Header -> Header)
+    - Strips any remaining stray asterisks
+    - Formats inline code and code blocks cleanly
+    """
+    if not text:
+        return ""
+
+    is_tty = sys.stdout.isatty()
+    bold_code = "\033[1m" if is_tty else ""
+    cyan_code = "\033[38;5;153m" if is_tty else ""
+    blue_code = "\033[1;34m" if is_tty else ""
+    reset_code = "\033[0m" if is_tty else ""
+
+    lines = []
+    in_code_block = False
+
+    for line in text.splitlines():
+        if line.strip().startswith("```"):
+            in_code_block = not in_code_block
+            continue
+
+        if in_code_block:
+            lines.append(f"    {line}")
+            continue
+
+        # Headers: # Header -> Header
+        header_match = re.match(r"^(?:#{1,6}\s+)(.+)$", line)
+        if header_match:
+            title = header_match.group(1).strip()
+            title = title.replace("**", "").replace("*", "").replace("#", "")
+            lines.append(f"{blue_code}{title}{reset_code}")
+            continue
+
+        # Bullet points: * item or - item -> • item
+        bullet_match = re.match(r"^(\s*)[\*\-]\s+(.+)$", line)
+        if bullet_match:
+            indent = bullet_match.group(1)
+            item_text = bullet_match.group(2)
+            item_text = re.sub(r"\*\*(.+?)\*\*", rf"{bold_code}\1{reset_code}", item_text)
+            item_text = re.sub(r"(?<!\*)\*([^\*\n]+?)\*(?!\*)", r"\1", item_text)
+            item_text = re.sub(r"`([^`\n]+?)`", rf"{cyan_code}\1{reset_code}", item_text)
+            item_text = item_text.replace("**", "").replace("*", "").replace("#", "")
+            lines.append(f"{indent}• {item_text}")
+            continue
+
+        # Regular lines: replace headers, bold, italic, code
+        processed = re.sub(r"(?:^|\s)#{1,6}\s+", " ", line)
+        processed = re.sub(r"\*\*(.+?)\*\*", rf"{bold_code}\1{reset_code}", processed)
+        processed = re.sub(r"(?<!\*)\*([^\*\n]+?)\*(?!\*)", r"\1", processed)
+        processed = re.sub(r"`([^`\n]+?)`", rf"{cyan_code}\1{reset_code}", processed)
+        processed = processed.replace("**", "").replace("*", "")
+        lines.append(processed)
+
+    return "\n".join(lines).strip()
 
 
 def run_agent(goal: str, prefer: str) -> int:
@@ -134,7 +196,8 @@ def main() -> int:
         print(f"[Gemini Error] {res.get('response')}", file=sys.stderr)
         return 1
     backend = res.get("backend", "gemini")
-    print(f"[{backend}]\n{res.get('response', '')}")
+    formatted = format_terminal_output(res.get("response", ""))
+    print(f"[{backend}]\n{formatted}")
     return 0
 
 

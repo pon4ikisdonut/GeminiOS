@@ -164,6 +164,11 @@ def configure_system(args, disk: str, uefi: bool):
         encoding="utf-8",
     )
 
+    # Ensure system-wide zsh and inputrc navigation
+    if (TARGET / "etc/skel/.zshrc").exists():
+        (TARGET / "etc/zsh").mkdir(parents=True, exist_ok=True)
+        shutil.copy2(TARGET / "etc/skel/.zshrc", TARGET / "etc/zsh/zshrc")
+
     # Apply Gemini API key if provided
     if args.api_key:
         gconf = TARGET / "etc/geminid/geminid.conf"
