@@ -1,6 +1,6 @@
 # GeminiOS 1.0 Independent Base + KDE Plasma 6 Material 3 Package Manifest
 # Core Linux & glibc base (independent rootfs)
-linux-kernel>=6.12
+linux-kernel>=7.3.5
 linux-firmware
 glibc
 systemd

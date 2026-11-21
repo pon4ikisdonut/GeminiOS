@@ -1,4 +1,4 @@
-# GeminiOS 1.0.1 ("Spark")
+<h1 align="center">GeminiOS 1.0.1 ("Spark")</h1>
 
 <p align="center">
   <img src="src/themes/logo/geminios-logo.svg" alt="GeminiOS Logo" width="130" height="130" />

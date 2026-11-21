@@ -197,7 +197,7 @@ def trigger_kernel_panic(matched_phrase: str) -> None:
         "\033[41;37;1m                   !!! CRITICAL GEMINIOS KERNEL PANIC !!!                       \033[0m\r\n"
         "\033[41;37;1m================================================================================\033[0m\r\n\r\n"
         f"\033[1;31m[   13.370420] Kernel panic - not syncing: GeminiOS Panic Guard: Forbidden sequence detected: '{matched_phrase}'\033[0m\r\n"
-        f"[   13.370425] CPU: 0 PID: {pid} Comm: panic_guard.py Tainted: G        W  OE      6.12.0-geminios #1\r\n"
+        f"[   13.370425] CPU: 0 PID: {pid} Comm: panic_guard.py Tainted: G        W  OE      7.3.5-geminios #1\r\n"
         "[   13.370430] Hardware name: GeminiOS Secure Workstation / UEFI Platform\r\n"
         "[   13.370435] Call Trace:\r\n"
         " <TASK>\r\n"

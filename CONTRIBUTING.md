@@ -56,7 +56,7 @@ GeminiOS/
 ```
 Скрипт автоматически:
 - Соберет образ строителя `geminios-builder:1.0.1`
-- Развернет независимую glibc + Linux 6.12 + KDE Plasma 6 систему
+- Развернет независимую glibc + Linux 7.3.5 + KDE Plasma 6 систему
 - Упакует squashfs и сгенерирует гибридный UEFI/BIOS ISO в папке `out/GeminiOS-1.0.1-x86_64.iso`
 
 ### Запуск в эмуляторе QEMU
