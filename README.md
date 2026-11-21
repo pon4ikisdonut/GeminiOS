@@ -14,7 +14,7 @@
   <a href="https://github.com/pon4ikisdonut/GeminiOS/actions"><img src="https://img.shields.io/badge/CI-Passing-2ea44f?style=for-the-badge&logo=githubactions&logoColor=white" alt="CI Status" /></a>
   <img src="https://img.shields.io/badge/Release-1.0.1_(Spark)-A8C7FA?style=for-the-badge&logo=linux&logoColor=062E6F" alt="Version 1.0.1" />
   <img src="https://img.shields.io/badge/KDE-Plasma_6_M3-blue?style=for-the-badge&logo=kde&logoColor=white" alt="KDE Plasma 6" />
-  <img src="https://img.shields.io/badge/Kernel-Linux_6.12-orange?style=for-the-badge&logo=linux&logoColor=white" alt="Linux Kernel 6.12" />
+  <img src="https://img.shields.io/badge/Kernel-Linux_7.3.5-orange?style=for-the-badge&logo=linux&logoColor=white" alt="Linux Kernel 7.3.5" />
 </p>
 
 ---
