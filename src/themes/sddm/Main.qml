@@ -7,26 +7,13 @@ Rectangle {
     height: 1080
     color: "#0B0D11"
 
-    property int userIndex: 0
     property string activeUser: {
-        if (userModel.lastUser && userModel.lastUser.length > 0) {
-            return userModel.lastUser;
-        }
-        if (userModel.count > 0 && userModel.get(userIndex)) {
-            return userModel.get(userIndex).name;
-        }
-        return "gemini";
-    }
-
-    Component.onCompleted: {
-        if (userModel.lastUser) {
-            for (var i = 0; i < userModel.count; ++i) {
-                if (userModel.get(i).name === userModel.lastUser) {
-                    userIndex = i;
-                    break;
-                }
+        try {
+            if (userModel && userModel.lastUser && userModel.lastUser.length > 0) {
+                return userModel.lastUser;
             }
-        }
+        } catch(e) {}
+        return "gemini";
     }
 
     // Material 3 Dark ChromeOS Wallpaper
@@ -85,8 +72,8 @@ Rectangle {
     // Material Design 3 Dark ChromeOS Floating Login Card
     Rectangle {
         id: loginCard
-        width: 420
-        height: 400
+        width: 400
+        height: 380
         radius: 28
         color: "#E61A1C24"
         border.color: "#383C48"
@@ -95,70 +82,64 @@ Rectangle {
 
         Column {
             anchors.fill: parent
-            anchors.margins: 32
-            spacing: 16
+            anchors.margins: 28
+            spacing: 14
 
             // Official Google G + Gemini Star Logo
             Image {
                 anchors.horizontalCenter: parent.horizontalCenter
                 source: config.logo || "assets/logo.png"
-                width: 80
-                height: 80
+                width: 72
+                height: 72
                 fillMode: Image.PreserveAspectFit
                 smooth: true
             }
 
-            // User Selection Header (ChromeOS style with user switch support)
-            Row {
-                anchors.horizontalCenter: parent.horizontalCenter
-                spacing: 8
+            // Material 3 Username Pill Input
+            Rectangle {
+                width: parent.width
+                height: 46
+                radius: 23
+                color: "#12141A"
+                border.color: usernameInput.activeFocus ? "#A8C7FA" : "#44474E"
+                border.width: usernameInput.activeFocus ? 2 : 1
+
+                Behavior on border.color { ColorAnimation { duration: 150 } }
 
                 Text {
-                    id: userNameText
-                    text: root.activeUser
-                    color: "#F0F0F8"
-                    font.family: "Roboto"
-                    font.pixelSize: 20
-                    font.weight: Font.DemiBold
                     anchors.verticalCenter: parent.verticalCenter
+                    anchors.left: parent.left
+                    anchors.leftMargin: 18
+                    text: "Username"
+                    color: "#8E9099"
+                    font.family: "Roboto"
+                    font.pixelSize: 14
+                    visible: usernameInput.text.length === 0
                 }
 
-                // Switch user pill button if multiple accounts or toggle custom user
-                Rectangle {
-                    width: 24
-                    height: 24
-                    radius: 12
-                    color: userSwitchArea.containsMouse ? "#3D4352" : "#282C37"
-                    visible: userModel.count > 1
-                    anchors.verticalCenter: parent.verticalCenter
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "▾"
-                        color: "#A8C7FA"
-                        font.pixelSize: 12
-                    }
-
-                    MouseArea {
-                        id: userSwitchArea
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            root.userIndex = (root.userIndex + 1) % userModel.count;
-                            root.activeUser = userModel.get(root.userIndex).name;
-                            passwordInput.text = "";
-                            errorMsg.text = "";
-                        }
-                    }
+                TextInput {
+                    id: usernameInput
+                    anchors.fill: parent
+                    anchors.leftMargin: 18
+                    anchors.rightMargin: 18
+                    verticalAlignment: TextInput.AlignVCenter
+                    color: "#F0F0F8"
+                    selectionColor: "#A8C7FA"
+                    selectedTextColor: "#062E6F"
+                    font.family: "Roboto"
+                    font.pixelSize: 14
+                    text: root.activeUser
+                    focus: false
+                    Keys.onReturnPressed: passwordInput.focus = true
+                    Keys.onEnterPressed: passwordInput.focus = true
                 }
             }
 
-            // ChromeOS Material 3 Pill Password Box
+            // Material 3 Password Pill Input (Single clean field without duplicate internal arrow)
             Rectangle {
                 width: parent.width
-                height: 50
-                radius: 25
+                height: 46
+                radius: 23
                 color: "#12141A"
                 border.color: passwordInput.activeFocus ? "#A8C7FA" : "#44474E"
                 border.width: passwordInput.activeFocus ? 2 : 1
@@ -168,8 +149,8 @@ Rectangle {
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.left: parent.left
-                    anchors.leftMargin: 20
-                    text: "Enter password"
+                    anchors.leftMargin: 18
+                    text: "Password"
                     color: "#8E9099"
                     font.family: "Roboto"
                     font.pixelSize: 14
@@ -179,55 +160,30 @@ Rectangle {
                 TextInput {
                     id: passwordInput
                     anchors.fill: parent
-                    anchors.leftMargin: 20
-                    anchors.rightMargin: 46
+                    anchors.leftMargin: 18
+                    anchors.rightMargin: 18
                     verticalAlignment: TextInput.AlignVCenter
                     echoMode: TextInput.Password
                     color: "#F0F0F8"
                     selectionColor: "#A8C7FA"
                     selectedTextColor: "#062E6F"
                     font.family: "Roboto"
-                    font.pixelSize: 15
+                    font.pixelSize: 14
                     focus: true
                     Keys.onReturnPressed: doLogin()
                     Keys.onEnterPressed: doLogin()
                 }
-
-                // Submit Arrow Button inside the password pill (ChromeOS style)
-                Rectangle {
-                    width: 36
-                    height: 36
-                    radius: 18
-                    anchors.right: parent.right
-                    anchors.rightMargin: 7
-                    anchors.verticalCenter: parent.verticalCenter
-                    color: submitArea.containsMouse ? "#C2E7FF" : "#A8C7FA"
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "➔"
-                        color: "#062E6F"
-                        font.pixelSize: 14
-                        font.bold: true
-                    }
-
-                    MouseArea {
-                        id: submitArea
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: doLogin()
-                    }
-                }
             }
 
-            // ChromeOS Sign-In Action Pill
+            // Single ChromeOS Sign-In Action Pill Button
             Rectangle {
                 id: signInBtn
                 width: parent.width
                 height: 46
                 radius: 23
                 color: signInArea.containsMouse ? "#C2E7FF" : "#A8C7FA"
+
+                Behavior on color { ColorAnimation { duration: 150 } }
 
                 Text {
                     anchors.centerIn: parent
@@ -252,14 +208,15 @@ Rectangle {
                 anchors.horizontalCenter: parent.horizontalCenter
                 color: "#FFB4AB"
                 font.family: "Roboto"
-                font.pixelSize: 13
+                font.pixelSize: 12
                 text: ""
+                wrapMode: Text.WordWrap
             }
         }
     }
 
     function doLogin() {
-        var user = root.activeUser || (userModel.lastUser || "gemini");
+        var user = usernameInput.text.trim() || root.activeUser || "gemini";
         var sessIdx = sessionModel.lastIndex >= 0 ? sessionModel.lastIndex : 0;
         errorMsg.text = "";
         sddm.login(user, passwordInput.text, sessIdx);
@@ -268,7 +225,8 @@ Rectangle {
     Connections {
         target: sddm
         function onLoginFailed() {
-            errorMsg.text = "Incorrect password for '" + root.activeUser + "'.";
+            var user = usernameInput.text.trim() || root.activeUser || "gemini";
+            errorMsg.text = "Incorrect credentials for '" + user + "'.";
             passwordInput.text = "";
             passwordInput.focus = true;
         }

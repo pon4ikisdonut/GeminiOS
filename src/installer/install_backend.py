@@ -204,6 +204,9 @@ sed -i 's/^#ru_RU.UTF-8/ru_RU.UTF-8/' /etc/locale.gen
 locale-gen || true
 echo "LANG=en_US.UTF-8" > /etc/locale.conf
 
+# Remove Live ISO autologin so installed system prompts for user password
+rm -f /etc/sddm.conf.d/20-autologin.conf
+
 # Standard disk initramfs with Plymouth OLED boot splash (removes geminios-live hook)
 cat > /etc/mkinitcpio.conf <<'MKCONF'
 MODULES=()

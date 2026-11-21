@@ -200,6 +200,14 @@ MinimumUid=1000
 RememberLastUser=true
 EOF
 
+    # Live ISO direct desktop auto-login for gemini user (no password prompt in Live mode)
+    cat > "${ROOTFS}/etc/sddm.conf.d/20-autologin.conf" <<'EOF'
+[Autologin]
+User=gemini
+Session=plasma
+Relogin=false
+EOF
+
     mkdir -p "${ROOTFS}/etc/systemd/system/sddm.service.d"
     cat > "${ROOTFS}/etc/systemd/system/sddm.service.d/10-timeout.conf" <<'EOF'
 [Service]
@@ -364,7 +372,7 @@ set gfxmode=auto
 terminal_output gfxterm
 set theme=/boot/grub/themes/geminios/theme.txt
 
-menuentry "Start GeminiOS 1.0.1 (Spark) - Material Design 3 Dark" {
+menuentry "Start GeminiOS 1.0.1 (Spark)" {
     linux /boot/vmlinuz-geminios geminios_label=GEMINIOS_1_0_1 quiet splash loglevel=3 rd.udev.log_priority=3 vt.global_cursor_default=0
     initrd /boot/initramfs-geminios.img
 }

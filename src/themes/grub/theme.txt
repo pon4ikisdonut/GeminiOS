@@ -4,14 +4,6 @@ desktop-image: "background.png"
 title-text: ""
 terminal-font: "Noto Sans Regular 14"
 
-+ image {
-    left = 50%-64
-    top = 10%
-    width = 128
-    height = 128
-    file = "logo.png"
-}
-
 + boot_menu {
     left = 15%
     width = 70%
