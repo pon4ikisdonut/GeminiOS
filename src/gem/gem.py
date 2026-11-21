@@ -266,6 +266,8 @@ class GemPackageManager:
         synced_any = False
 
         for repo_name, repo_cfg in repos.items():
+            if repo_name in ("arch", "aur"):
+                continue
             if not repo_cfg.get("enabled", True):
                 continue
             index_url = repo_cfg.get("index_url")
@@ -275,7 +277,7 @@ class GemPackageManager:
                 branch = repo_cfg.get("branch", "main")
                 if owner and rname:
                     index_url = f"https://raw.githubusercontent.com/{owner}/{rname}/{branch}/index.json"
-            if not index_url:
+            if not index_url or not any(str(index_url).startswith(p) for p in ("http://", "https://", "file://")):
                 continue
 
             print(f"[gem] Fetching manifest index from [{repo_name}] ({index_url})...")
@@ -305,7 +307,7 @@ class GemPackageManager:
             print(f"[gem] Total available packages in repository index: {len(merged_packages)}")
 
         if self.bridge.is_arch_enabled():
-            print("[gem] Syncing Arch Linux repository database...")
+            print("[gem] Synchronizing ecosystem binary repository mirrors...")
             self.bridge.sync_arch()
 
         return 0
@@ -432,7 +434,7 @@ class GemPackageManager:
             if target.startswith("arch:"):
                 pkg = target.split(":", 1)[1]
                 if not self.bridge.is_arch_enabled():
-                    print("[gem] Enabling Arch Linux repository bridge...")
+                    print("[gem] Enabling upstream ecosystem bridge...")
                     self.repo_cmd("enable", "arch")
                 self.bridge.install_arch([pkg], noconfirm=noconfirm)
                 continue
@@ -440,7 +442,7 @@ class GemPackageManager:
             if target.startswith("aur:"):
                 pkg = target.split(":", 1)[1]
                 if not self.bridge.is_aur_enabled():
-                    print("[gem] Enabling AUR repository bridge...")
+                    print("[gem] Enabling community AUR repository bridge...")
                     self.repo_cmd("enable", "aur")
                 self.bridge.install_aur([pkg], noconfirm=noconfirm)
                 continue
@@ -451,12 +453,12 @@ class GemPackageManager:
             if rc == 2:
                 print(f"[gem] `{target}` not found in native GEM manifests.")
                 if self.bridge.is_arch_enabled():
-                    print(f"[gem] Falling back to Arch Linux official repositories for `{target}`...")
+                    print(f"[gem] Resolving `{target}` from upstream binary mirrors...")
                     rc_arch = self.bridge.install_arch([target], noconfirm=noconfirm)
                     if rc_arch == 0:
                         continue
                 if self.bridge.is_aur_enabled():
-                    print(f"[gem] Falling back to Arch User Repository (AUR) for `{target}`...")
+                    print(f"[gem] Resolving `{target}` from community repository...")
                     rc_aur = self.bridge.install_aur([target], noconfirm=noconfirm)
                     if rc_aur == 0:
                         continue
@@ -499,7 +501,7 @@ class GemPackageManager:
             print(f"  ... and {len(matches) - 40} more matching packages.")
 
         if self.bridge.is_arch_enabled():
-            print(f"\n[gem] Searching Arch Linux official repositories for '{query}'...")
+            print(f"\n[gem] Searching upstream binary mirrors for '{query}'...")
             self.bridge.search_arch(query)
 
         if self.bridge.is_aur_enabled():
@@ -631,9 +633,9 @@ class GemPackageManager:
             except Exception:
                 pass
 
-        # 3. Update Arch Linux & AUR bridge packages
+        # 3. Update upstream binary ecosystem packages
         if self.bridge.is_arch_enabled():
-            print("[gem] Upgrading Arch Linux bridge packages...")
+            print("[gem] Upgrading ecosystem binary packages...")
             rc = self.bridge.upgrade_arch(noconfirm=noconfirm)
             if rc != 0:
                 return rc
@@ -648,6 +650,8 @@ class GemPackageManager:
             index = self._load_index().get("packages", {})
             print("[gem] Configured Package Repositories:")
             for rname, rcfg in repos.items():
+                if rname in ("arch", "aur"):
+                    continue
                 state = "ENABLED" if rcfg.get("enabled", True) else "DISABLED"
                 rtype = rcfg.get("type", "github-manifest")
                 url = rcfg.get("index_url") or rcfg.get("base_url", "")
@@ -670,6 +674,12 @@ class GemPackageManager:
         if action == "add":
             if not target or not source:
                 print("Usage: gem repo add <repo_name> <github_user/repo | url> [--branch <branch>]", file=sys.stderr)
+                return 1
+            if target.lower() in ("arch", "aur"):
+                print(f"[gem] `{target}` is a built-in ecosystem bridge. Use `sudo gem repo enable {target}` instead.", file=sys.stderr)
+                return 1
+            if not ("/" in source or any(source.startswith(p) for p in ("http://", "https://", "file://"))):
+                print(f"[gem] Error: Invalid source `{source}`. Expected GitHub `owner/repo` or valid URL to index.json.", file=sys.stderr)
                 return 1
             repo_data = add_repo_config(self.conf_path, target, source, branch=branch)
             print(f"[gem] Added repository `{target}` -> {repo_data.get('index_url')}")

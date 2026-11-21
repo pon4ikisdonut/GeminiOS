@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <defs>
+    <style type="text/css">
+      .task-hover { fill: #FFFFFF; fill-opacity: 0.08; rx: 14px; ry: 14px; }
+      .task-active-bg { fill: #A8C7FA; fill-opacity: 0.16; rx: 14px; ry: 14px; }
+      .task-active-pill { fill: #A8C7FA; rx: 2px; ry: 2px; }
+    </style>
+  </defs>
+
+  <!-- normal state (transparent) -->
+  <rect id="normal" x="0" y="0" width="48" height="48" fill="none" />
+
+  <!-- hover state (soft Material 3 hover pill) -->
+  <g id="hover">
+    <rect class="task-hover" x="2" y="2" width="44" height="44" />
+  </g>
+
+  <!-- active running state with ChromeOS bottom pill indicator -->
+  <g id="active">
+    <rect class="task-active-bg" x="2" y="2" width="44" height="44" />
+    <rect class="task-active-pill" x="14" y="43" width="20" height="3" />
+  </g>
+
+  <!-- hover on active app -->
+  <g id="hover-active">
+    <rect class="task-active-bg" fill-opacity="0.25" x="2" y="2" width="44" height="44" />
+    <rect class="task-active-pill" x="14" y="43" width="20" height="3" />
+  </g>
+
+  <!-- minimized running state -->
+  <g id="minimized">
+    <rect class="task-active-pill" fill-opacity="0.6" x="18" y="44" width="12" height="2" />
+  </g>
+
+  <!-- attention state -->
+  <g id="attention">
+    <rect fill="#FBBC05" fill-opacity="0.22" rx="14" ry="14" x="2" y="2" width="44" height="44" />
+    <rect fill="#FBBC05" rx="2" ry="2" x="14" y="43" width="20" height="3" />
+  </g>
+</svg>

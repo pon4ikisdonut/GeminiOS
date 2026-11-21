@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <style type="text/css">
+      .popup-bg { fill: #1C2029; fill-opacity: 0.98; stroke: #383D4A; stroke-width: 1; }
+    </style>
+  </defs>
+  <path id="topleft" class="popup-bg" d="M 0,16 A 16,16 0 0 1 16,0 L 16,16 Z" />
+  <rect id="top" class="popup-bg" x="16" y="0" width="32" height="16" />
+  <path id="topright" class="popup-bg" d="M 48,0 A 16,16 0 0 1 64,16 L 48,16 Z" />
+  <rect id="left" class="popup-bg" x="0" y="16" width="16" height="32" />
+  <rect id="center" class="popup-bg" x="16" y="16" width="32" height="32" />
+  <rect id="right" class="popup-bg" x="48" y="16" width="16" height="32" />
+  <path id="bottomleft" class="popup-bg" d="M 0,48 L 16,48 L 16,64 A 16,16 0 0 1 0,48 Z" />
+  <rect id="bottom" class="popup-bg" x="16" y="48" width="32" height="16" />
+  <path id="bottomright" class="popup-bg" d="M 48,48 L 64,48 A 16,16 0 0 1 48,64 Z" />
+
+  <rect id="hint-top-margin" x="0" y="0" width="1" height="8" fill="none" />
+  <rect id="hint-bottom-margin" x="0" y="56" width="1" height="8" fill="none" />
+  <rect id="hint-left-margin" x="0" y="0" width="8" height="1" fill="none" />
+  <rect id="hint-right-margin" x="56" y="0" width="8" height="1" fill="none" />
+  <rect id="hint-stretch-borders" x="0" y="0" width="0" height="0" />
+</svg>

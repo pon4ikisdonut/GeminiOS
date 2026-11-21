@@ -385,8 +385,18 @@ class GeminiOOBE(QWidget):
 
 
 def main() -> int:
-    if MARKER_FILE.exists() and "--force" not in sys.argv:
-        return 0
+    import os
+    if "--force" not in sys.argv:
+        # Never pop up automatically in Live ISO environment
+        if (
+            Path("/run/archiso").exists()
+            or Path("/run/geminios-live").exists()
+            or Path("/bootmnt").exists()
+            or os.environ.get("USER") == "gemini"
+        ):
+            return 0
+        if MARKER_FILE.exists():
+            return 0
     app = QApplication(sys.argv)
     w = GeminiOOBE()
     w.show()

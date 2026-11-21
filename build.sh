@@ -75,9 +75,20 @@ run_qemu_test() {
 install_geminios_stack() {
     log "Installing GeminiOS independent core, package manager, AI daemon, Panic Guard, and Material 3 Plasma 6 stack into rootfs..."
 
-    # 1. Core OS identity & sysctl
+    # 1. Core OS identity & sysctl (ensure zero Arch branding / identification)
+    rm -f "${ROOTFS}/etc/arch-release" "${ROOTFS}/etc/arch-release.pacnew"
     install -Dm644 "${ROOT_DIR}/config/os-release" "${ROOTFS}/etc/os-release"
+    ln -sf /etc/os-release "${ROOTFS}/usr/lib/os-release"
     install -Dm644 "${ROOT_DIR}/config/geminios-release" "${ROOTFS}/etc/geminios-release"
+    echo "GeminiOS 1.0.1 (Spark) \r (\l)" > "${ROOTFS}/etc/issue"
+    echo "GeminiOS 1.0.1 (Spark)" > "${ROOTFS}/etc/issue.net"
+    echo "GeminiOS 1.0.1 (Spark)" > "${ROOTFS}/etc/motd"
+    cat > "${ROOTFS}/etc/lsb-release" <<'EOF'
+DISTRIB_ID=GeminiOS
+DISTRIB_RELEASE=1.0.1
+DISTRIB_CODENAME=spark
+DISTRIB_DESCRIPTION="GeminiOS 1.0.1 (Spark)"
+EOF
     install -Dm644 "${ROOT_DIR}/config/sysctl.d/99-geminios.conf" "${ROOTFS}/etc/sysctl.d/99-geminios.conf"
     echo "geminios" > "${ROOTFS}/etc/hostname"
     echo "KEYMAP=us" > "${ROOTFS}/etc/vconsole.conf"
@@ -129,7 +140,8 @@ EOF
     install -Dm755 "${ROOT_DIR}/src/integrations/overlay/gemini_overlay.py" "${ROOTFS}/usr/bin/gemini-overlay"
     install -Dm755 "${ROOT_DIR}/src/integrations/clipboard/gemini_clip.py" "${ROOTFS}/usr/bin/gemini-clip"
     install -Dm755 "${ROOT_DIR}/src/integrations/oobe/gemini_oobe.py" "${ROOTFS}/usr/lib/geminios/gemini_oobe.py"
-    install -Dm644 "${ROOT_DIR}/src/integrations/oobe/gemini-oobe.desktop" "${ROOTFS}/etc/xdg/autostart/gemini-oobe.desktop"
+    install -Dm644 "${ROOT_DIR}/src/integrations/oobe/gemini-oobe.desktop" "${ROOTFS}/usr/share/applications/gemini-oobe.desktop"
+    rm -f "${ROOTFS}/etc/xdg/autostart/gemini-oobe.desktop"
     install -Dm644 "${ROOT_DIR}/src/integrations/dolphin/gemini-dolphin.desktop" \
         "${ROOTFS}/usr/share/kio/servicemenus/gemini-dolphin.desktop"
 
@@ -150,7 +162,7 @@ Type=Application
 Name=GeminiOS Spotlight Overlay
 Comment=Global Gemini AI & Agent Mode launcher (Super+G)
 Exec=/usr/bin/gemini-overlay
-Icon=dialog-information
+Icon=geminios-launcher
 Categories=System;Utility;
 EOF
 
@@ -244,6 +256,9 @@ EOF
     # 9. KDE Plasma 6 Google Material Design 3 Dark Theme + Splash + Konsole + Status-Bar Widget
     install -Dm644 "${ROOT_DIR}/src/themes/plasma-m3/color-schemes/GeminiM3Dark.colors" \
         "${ROOTFS}/usr/share/color-schemes/GeminiM3Dark.colors"
+    mkdir -p "${ROOTFS}/usr/share/plasma/desktoptheme/GeminiM3"
+    cp -r "${ROOT_DIR}/src/themes/plasma-m3/desktoptheme/GeminiM3/"* \
+        "${ROOTFS}/usr/share/plasma/desktoptheme/GeminiM3/"
     mkdir -p "${ROOTFS}/usr/share/plasma/look-and-feel/org.geminios.material3.desktop"
     cp -r "${ROOT_DIR}/src/themes/plasma-m3/look-and-feel/org.geminios.material3.desktop/"* \
         "${ROOTFS}/usr/share/plasma/look-and-feel/org.geminios.material3.desktop/"
@@ -288,7 +303,7 @@ EOF
 
     cat > "${ROOTFS}/etc/skel/.config/plasmarc" <<'EOF'
 [Theme]
-name=breeze-dark
+name=GeminiM3
 EOF
 
     cat > "${ROOTFS}/etc/skel/.config/kdeglobals" <<'EOF'

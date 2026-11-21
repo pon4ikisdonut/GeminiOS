@@ -13,7 +13,7 @@ toolBarFont=Roboto,10,-1,5,400,0,0,0,0,0
 Theme=breeze-dark
 
 [plasmarc][Theme]
-name=breeze-dark
+name=GeminiM3
 
 [kwinrc][org.kde.kdecoration2]
 library=org.kde.breeze

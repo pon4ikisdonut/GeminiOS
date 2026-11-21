@@ -165,7 +165,9 @@ def trigger_kernel_panic(matched_phrase: str) -> None:
 
     # 2. Kill graphical display servers immediately so DRM drops to VT console
     try:
-        subprocess.run(["pkill", "-9", "-f", "kwin_wayland|kwin_x11|Xorg|sddm|startplasma"], check=False)
+        subprocess.run(["systemctl", "stop", "sddm", "sddm.service", "display-manager.service", "--no-block"], check=False)
+        subprocess.run(["systemctl", "kill", "-s", "SIGKILL", "sddm.service"], check=False)
+        subprocess.run(["pkill", "-9", "-f", "kwin_wayland|kwin_x11|Xorg|sddm|startplasma|plasma"], check=False)
         subprocess.run(["chvt", "1"], check=False)
     except Exception:
         pass
@@ -255,11 +257,40 @@ def trigger_kernel_panic(matched_phrase: str) -> None:
                 pass
         time.sleep(0.12)
 
-    # 6. Trigger real hardware kernel panic via SysRq
+    # 6. Trigger real hardware kernel panic via SysRq (sync -> unmount-ro -> crash)
     try:
+        Path("/proc/sys/kernel/sysrq").write_text("1\n", encoding="utf-8")
+        Path("/proc/sysrq-trigger").write_text("s\n", encoding="utf-8")
+        time.sleep(0.05)
+        Path("/proc/sysrq-trigger").write_text("u\n", encoding="utf-8")
+        time.sleep(0.05)
         Path("/proc/sysrq-trigger").write_text("c\n", encoding="utf-8")
     except Exception as exc:
         print(f"[panic-guard] Failed to trigger sysrq panic: {exc}", file=sys.stderr)
+
+    # 7. Permanent kernel panic halt loop.
+    # In case sysrq crash is delayed or running in a hypervisor without sysrq emulation,
+    # NEVER exit back to user session or SDDM. Hold VT1 console permanently in Kernel Panic state.
+    while True:
+        for dev in ("/dev/tty1", "/dev/console", "/dev/tty0", "/dev/tty"):
+            try:
+                with open(dev, "w", encoding="utf-8", errors="ignore") as tty:
+                    tty.write(panic_screen)
+                    tty.flush()
+            except Exception:
+                pass
+        for led in led_files:
+            try:
+                Path(led).write_text("1\n", encoding="utf-8")
+            except Exception:
+                pass
+        time.sleep(0.2)
+        for led in led_files:
+            try:
+                Path(led).write_text("0\n", encoding="utf-8")
+            except Exception:
+                pass
+        time.sleep(0.2)
 
 
 def find_keyboard_devices() -> List[str]:

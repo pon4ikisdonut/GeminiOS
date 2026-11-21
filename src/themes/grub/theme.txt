@@ -14,8 +14,6 @@ terminal-font: "Noto Sans Regular 14"
     item_height = 40
     item_padding = 12
     item_spacing = 8
-    icon_width = 24
-    icon_height = 24
 }
 
 + progress_bar {

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <rect id="normal" x="0" y="0" width="48" height="48" fill="none" />
+  <g id="hover">
+    <rect x="2" y="2" width="44" height="44" rx="12" ry="12" fill="#FFFFFF" fill-opacity="0.08" />
+  </g>
+  <g id="selected">
+    <rect x="2" y="2" width="44" height="44" rx="12" ry="12" fill="#A8C7FA" fill-opacity="0.22" stroke="#A8C7FA" stroke-opacity="0.4" stroke-width="1" />
+  </g>
+</svg>

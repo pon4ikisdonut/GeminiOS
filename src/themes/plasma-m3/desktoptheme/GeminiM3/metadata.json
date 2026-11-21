@@ -1,0 +1,16 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Email": "geminios@gemini.internal",
+                "Name": "GeminiOS Design Team"
+            }
+        ],
+        "Description": "Google Material Design 3 Dark Desktop Theme for GeminiOS",
+        "Id": "GeminiM3",
+        "License": "GPL-3.0-or-later",
+        "Name": "GeminiOS Material 3 Dark",
+        "Version": "1.0.1",
+        "Website": "https://github.com/pon4ikisdonut/GeminiOS"
+    }
+}

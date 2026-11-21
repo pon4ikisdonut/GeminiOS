@@ -95,7 +95,7 @@ class ArchBridge:
             self._run(["pacman-key", "--populate", "archlinux"], check=False)
 
         self._run(["pacman", "--config", str(self.pacman_conf), "-Sy", "--noconfirm"], check=False)
-        print("[gem:arch] Arch Linux repository bridge is now active.")
+        print("[gem:ecosystem] Upstream package mirror bridge is now active.")
 
     def enable_aur(self) -> None:
         """Enable AUR bridge and bootstrap `yay-bin` if not installed."""
@@ -128,6 +128,15 @@ class ArchBridge:
                 check=False,
             )
         print("[gem:aur] AUR bridge is now active.")
+
+    def sync_arch(self) -> int:
+        if not self.is_arch_enabled():
+            return 0
+        if not self.pacman_conf.exists():
+            self.enable_arch()
+        if not shutil.which("pacman"):
+            return 0
+        return subprocess.run(["pacman", "--config", str(self.pacman_conf), "-Sy", "--noconfirm"], check=False).returncode
 
     def upgrade_arch(self, noconfirm: bool = False) -> int:
         if not self.is_arch_enabled() or not shutil.which("pacman"):

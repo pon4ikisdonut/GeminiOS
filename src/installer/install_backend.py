@@ -204,6 +204,20 @@ sed -i 's/^#ru_RU.UTF-8/ru_RU.UTF-8/' /etc/locale.gen
 locale-gen || true
 echo "LANG=en_US.UTF-8" > /etc/locale.conf
 
+# Ensure system is strictly identified as GeminiOS (clean Arch release files)
+rm -f /etc/arch-release /etc/arch-release.pacnew
+ln -sf /etc/os-release /usr/lib/os-release
+echo "GeminiOS 1.0.1 (Spark) \\r (\\l)" > /etc/issue
+echo "GeminiOS 1.0.1 (Spark)" > /etc/issue.net
+echo "GeminiOS 1.0.1 (Spark)" > /etc/motd
+echo "GeminiOS 1.0.1 (Spark)" > /etc/geminios-release
+cat > /etc/lsb-release <<'LSBEOF'
+DISTRIB_ID=GeminiOS
+DISTRIB_RELEASE=1.0.1
+DISTRIB_CODENAME=spark
+DISTRIB_DESCRIPTION="GeminiOS 1.0.1 (Spark)"
+LSBEOF
+
 # Remove Live ISO autologin so installed system prompts for user password
 rm -f /etc/sddm.conf.d/20-autologin.conf
 
